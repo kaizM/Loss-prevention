@@ -456,6 +456,79 @@ def test_video_processing():
     
     return redirect(url_for('review_transaction', transaction_id=test_transaction.id))
 
+@app.route('/alibi_integration')
+def alibi_integration():
+    """Alibi web playback integration page"""
+    from datetime import date
+    return render_template('alibi_web_integration.html', today=date.today().isoformat())
+
+@app.route('/api/pending_transactions')
+def api_pending_transactions():
+    """API endpoint to get transactions needing video review"""
+    pending = SuspiciousTransaction.query.filter(
+        SuspiciousTransaction.video_processed == False
+    ).order_by(SuspiciousTransaction.transaction_timestamp.desc()).limit(20).all()
+    
+    transactions = []
+    for transaction in pending:
+        transactions.append({
+            'id': transaction.id,
+            'transaction_timestamp': transaction.transaction_timestamp.isoformat(),
+            'transaction_type': transaction.transaction_type,
+            'amount': transaction.amount,
+            'cashier_id': transaction.cashier_id,
+            'register_id': transaction.register_id
+        })
+    
+    return jsonify(transactions)
+
+@app.route('/upload_video_clips', methods=['POST'])
+def upload_video_clips():
+    """Handle video clip uploads from Alibi web interface"""
+    try:
+        uploaded_files = request.files.getlist('videos')
+        
+        if not uploaded_files:
+            return jsonify({'success': False, 'error': 'No files uploaded'})
+        
+        uploaded_count = 0
+        for file in uploaded_files:
+            if file.filename and allowed_file(file.filename):
+                # Create clips directory if it doesn't exist
+                upload_date = datetime.now().strftime('%Y-%m-%d')
+                clips_dir = os.path.join('clips', upload_date)
+                os.makedirs(clips_dir, exist_ok=True)
+                
+                # Save the file
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(clips_dir, filename)
+                file.save(filepath)
+                
+                # Try to link to transaction if filename contains ID
+                try:
+                    # Extract transaction ID from filename (if present)
+                    import re
+                    id_match = re.search(r'transaction_(\d+)', filename)
+                    if id_match:
+                        transaction_id = int(id_match.group(1))
+                        transaction = SuspiciousTransaction.query.get(transaction_id)
+                        if transaction:
+                            transaction.video_clip_path = filepath
+                            transaction.video_processed = True
+                            db.session.commit()
+                except:
+                    pass  # Continue even if linking fails
+                
+                uploaded_count += 1
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Uploaded {uploaded_count} video clips successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/test_live_feed')
 def test_live_feed():
     """Test live video feed connection"""

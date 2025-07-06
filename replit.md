@@ -110,6 +110,7 @@ Recent Changes:
   * Configured for user's actual DVR: gngpalacios.alibiddns.com:8000, Camera 4
   * System works with uploaded video files (DVR is secured on private network as expected)
   * Added live feed testing page and comprehensive video upload guide
+  * Created Alibi web playback integration for easy video access and clip downloading
   * Configured with SQLite database for local, private data storage
 - July 06, 2025: Enhanced video processing system
   * Added Alibi Cloud API integration for direct video clip extraction
