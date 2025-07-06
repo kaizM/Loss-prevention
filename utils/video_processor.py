@@ -265,7 +265,7 @@ def is_ffmpeg_available():
 
 def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
     """
-    Extract video clip from Alibi Cloud API using playback functionality.
+    Extract video clip from Local Alibi DVR using web interface.
     
     Args:
         timestamp: Transaction timestamp
@@ -277,69 +277,74 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
         bool: True if successful, False otherwise
     """
     try:
-        # Get Alibi Cloud credentials from environment
-        alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
-        alibi_username = os.environ.get('ALIBI_USERNAME')
-        alibi_password = os.environ.get('ALIBI_PASSWORD')
-        camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')  # Default to camera 4 for register area
+        # Get Local Alibi DVR settings
+        alibi_dvr_ip = os.environ.get('ALIBI_DVR_IP', '192.168.1.100')
+        alibi_username = os.environ.get('ALIBI_USERNAME', 'admin')
+        alibi_password = os.environ.get('ALIBI_PASSWORD', 'password')
+        camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')
         
-        if not all([alibi_api_url, alibi_username, alibi_password]):
-            logging.warning("Alibi Cloud credentials not configured. Please set ALIBI_CLOUD_API, ALIBI_USERNAME, and ALIBI_PASSWORD environment variables.")
-            return False
-        
-        # Convert to military time format as used by Alibi systems
+        # Convert to format used by Alibi DVR systems
         start_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
         end_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
         
-        logging.info(f"Requesting Alibi Cloud clip from {start_str} to {end_str}")
+        logging.info(f"Requesting clip from local DVR {alibi_dvr_ip} for Camera {camera_id}")
+        logging.info(f"Time range: {start_str} to {end_str}")
         
-        # Try multiple API endpoints that Alibi Cloud commonly uses
-        api_endpoints = [
-            f"{alibi_api_url}/api/video/export",
-            f"{alibi_api_url}/api/recordings/export",
-            f"{alibi_api_url}/video/export",
-            f"{alibi_api_url}/playback/export"
+        # Try different common DVR ports and endpoints
+        common_configs = [
+            {'port': '80', 'path': '/cgi-bin/videodownload.cgi'},
+            {'port': '8080', 'path': '/video/download'},
+            {'port': '8000', 'path': '/api/video/export'},
+            {'port': '80', 'path': '/playback/download'}
         ]
         
-        for api_endpoint in api_endpoints:
+        for config in common_configs:
             try:
-                # Payload for video export
-                payload = {
-                    'camera_id': camera_id,
-                    'start_time': start_str,
-                    'end_time': end_str,
-                    'format': 'mp4',
-                    'quality': 'high'
+                # Build URL for video download
+                dvr_url = f"http://{alibi_dvr_ip}:{config['port']}{config['path']}"
+                
+                # Parameters for video export
+                params = {
+                    'camera': camera_id,
+                    'channel': camera_id,
+                    'starttime': start_str,
+                    'endtime': end_str,
+                    'format': 'mp4'
                 }
                 
                 # Make authenticated request
-                response = requests.post(
-                    api_endpoint,
-                    json=payload,
+                response = requests.get(
+                    dvr_url,
+                    params=params,
                     auth=(alibi_username, alibi_password),
-                    timeout=60  # Longer timeout for video processing
+                    timeout=60,
+                    stream=True
                 )
                 
-                if response.status_code == 200:
+                if response.status_code == 200 and 'video' in response.headers.get('content-type', ''):
                     # Save the video clip
                     with open(output_path, 'wb') as f:
-                        f.write(response.content)
-                    logging.info(f"Successfully downloaded clip from Alibi Cloud via {api_endpoint}")
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    logging.info(f"Successfully downloaded clip from local DVR via {dvr_url}")
                     return True
                 elif response.status_code == 404:
-                    continue  # Try next endpoint
+                    continue  # Try next configuration
                 else:
-                    logging.warning(f"Alibi Cloud API {api_endpoint} returned: {response.status_code}")
+                    logging.warning(f"DVR endpoint {dvr_url} returned: {response.status_code}")
                     
             except requests.exceptions.RequestException as e:
-                logging.warning(f"Failed to connect to {api_endpoint}: {str(e)}")
+                logging.warning(f"Failed to connect to DVR at {dvr_url}: {str(e)}")
                 continue
         
-        logging.error("All Alibi Cloud API endpoints failed")
-        return False
+        logging.error("All DVR endpoints failed - will try alternative methods")
+        
+        # Alternative: Use RTSP to record clip (requires FFmpeg)
+        rtsp_url = f"rtsp://{alibi_username}:{alibi_password}@{alibi_dvr_ip}:554/cam{camera_id}"
+        return extract_clip_from_rtsp(rtsp_url, timestamp, output_path, start_time, end_time)
             
     except Exception as e:
-        logging.error(f"Error extracting clip from Alibi Cloud: {str(e)}")
+        logging.error(f"Error extracting clip from local DVR: {str(e)}")
         return False
 
 def extract_clip_from_rtsp(rtsp_url, timestamp, output_path, start_time, end_time):

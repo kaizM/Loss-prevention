@@ -463,25 +463,36 @@ def test_live_feed():
 
 @app.route('/live_feed_stream')
 def live_feed_stream():
-    """Stream live video feed from Alibi Cloud"""
-    # Get Alibi Cloud settings
-    alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
-    alibi_username = os.environ.get('ALIBI_USERNAME')
-    alibi_password = os.environ.get('ALIBI_PASSWORD')
+    """Stream live video feed from Local Alibi DVR"""
+    # Get Local Alibi DVR settings
+    alibi_dvr_ip = os.environ.get('ALIBI_DVR_IP', '192.168.1.100')
+    alibi_username = os.environ.get('ALIBI_USERNAME', 'admin')
+    alibi_password = os.environ.get('ALIBI_PASSWORD', 'password')
     camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')  # Default to camera 4
     
-    if not all([alibi_api_url, alibi_username, alibi_password]):
-        return jsonify({
-            'error': 'Alibi Cloud not configured. Please set ALIBI_CLOUD_API, ALIBI_USERNAME, and ALIBI_PASSWORD in Secrets.'
-        }), 400
+    # Try different common Alibi DVR ports and URLs
+    common_ports = ['80', '8080', '8000', '554']
     
-    # Return live stream URL for Alibi Cloud
-    live_url = f"{alibi_api_url}/live/camera/{camera_id}"
+    for port in common_ports:
+        try:
+            # Test connection to DVR
+            import requests
+            test_url = f"http://{alibi_dvr_ip}:{port}"
+            response = requests.get(test_url, timeout=5)
+            if response.status_code == 200:
+                return jsonify({
+                    'dvr_url': test_url,
+                    'camera_id': camera_id,
+                    'status': 'local_dvr_found',
+                    'port': port
+                })
+        except:
+            continue
     
     return jsonify({
-        'live_url': live_url,
-        'camera_id': camera_id,
-        'status': 'configured'
+        'error': 'Local Alibi DVR not found. Please check network connection and IP address.',
+        'dvr_ip': alibi_dvr_ip,
+        'status': 'not_found'
     })
 
 @app.errorhandler(404)
