@@ -100,6 +100,12 @@ The system uses three main tables:
 
 ```
 Recent Changes:
+- July 06, 2025: Enhanced filtering system for better user experience
+  * Added report-specific filtering to dashboard
+  * Implemented date-based filtering with visual indicators
+  * Added "Clear Filters" button for easy navigation
+  * Fixed context preservation when reviewing transactions
+  * Added smart filtering badges to show active filters
 - July 06, 2025: Enhanced video processing system
   * Added Alibi Cloud API integration for direct video clip extraction
   * Added RTSP stream support for live camera feeds

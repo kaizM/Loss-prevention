@@ -20,7 +20,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="GET" class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="status" class="form-label">Review Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
@@ -30,7 +30,7 @@
                             <option value="fraud" {% if status_filter == 'fraud' %}selected{% endif %}>Fraud</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="type" class="form-label">Transaction Type</label>
                         <select class="form-select" id="type" name="type">
                             <option value="all" {% if transaction_type_filter == 'all' %}selected{% endif %}>All Types</option>
@@ -40,12 +40,19 @@
                             <option value="DISCOUNT REMOVED" {% if transaction_type_filter == 'DISCOUNT REMOVED' %}selected{% endif %}>DISCOUNT REMOVED</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label for="date_filter" class="form-label">Date Filter</label>
+                        <input type="date" class="form-control" id="date_filter" name="date_filter" value="{{ date_filter }}">
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label">&nbsp;</label>
-                        <div class="d-grid">
+                        <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-filter me-2"></i>Apply Filters
+                                <i class="fas fa-filter me-2"></i>Filter
                             </button>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </a>
                         </div>
                     </div>
                 </form>
@@ -62,6 +69,18 @@
                 <h5 class="card-title mb-0">
                     Suspicious Transactions
                     <span class="badge bg-secondary ms-2">{{ transactions.total }} total</span>
+                    {% if report_id %}
+                        <span class="badge bg-info ms-2">Report #{{ report_id }}</span>
+                    {% endif %}
+                    {% if date_filter %}
+                        <span class="badge bg-success ms-2">{{ date_filter }}</span>
+                    {% endif %}
+                    {% if status_filter != 'all' %}
+                        <span class="badge bg-warning ms-2">{{ status_filter|title }}</span>
+                    {% endif %}
+                    {% if transaction_type_filter != 'all' %}
+                        <span class="badge bg-primary ms-2">{{ transaction_type_filter }}</span>
+                    {% endif %}
                 </h5>
             </div>
             <div class="card-body">
@@ -124,6 +143,7 @@
                                                             date_filter=request.args.get('date_filter', ''),
                                                             status_filter=request.args.get('status', ''),
                                                             type_filter=request.args.get('type', ''),
+                                                            report_id=request.args.get('report_id', ''),
                                                             page=request.args.get('page', 1)) }}" 
                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye me-1"></i>Review
@@ -141,7 +161,7 @@
                         <ul class="pagination justify-content-center">
                             {% if transactions.has_prev %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.prev_num, status=status_filter, type=transaction_type_filter) }}">Previous</a>
+                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.prev_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id) }}">Previous</a>
                                 </li>
                             {% endif %}
                             
@@ -149,7 +169,7 @@
                                 {% if page_num %}
                                     {% if page_num != transactions.page %}
                                         <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('dashboard', page=page_num, status=status_filter, type=transaction_type_filter) }}">{{ page_num }}</a>
+                                            <a class="page-link" href="{{ url_for('dashboard', page=page_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id) }}">{{ page_num }}</a>
                                         </li>
                                     {% else %}
                                         <li class="page-item active">

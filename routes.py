@@ -109,6 +109,7 @@ def dashboard():
     status_filter = request.args.get('status', 'all')
     transaction_type_filter = request.args.get('type', 'all')
     date_filter = request.args.get('date_filter', '')
+    report_id = request.args.get('report_id', '', type=str)
     
     # Build query
     query = SuspiciousTransaction.query
@@ -118,6 +119,14 @@ def dashboard():
     
     if transaction_type_filter != 'all':
         query = query.filter_by(transaction_type=transaction_type_filter)
+    
+    # Add report ID filtering (specific report)
+    if report_id:
+        try:
+            report_id_int = int(report_id)
+            query = query.filter_by(report_id=report_id_int)
+        except ValueError:
+            flash(f'Invalid report ID: {report_id}', 'error')
     
     # Add date filtering
     if date_filter:
@@ -142,7 +151,8 @@ def dashboard():
                          transactions=transactions, 
                          status_filter=status_filter,
                          transaction_type_filter=transaction_type_filter,
-                         date_filter=date_filter)
+                         date_filter=date_filter,
+                         report_id=report_id)
 
 @app.route('/review/<int:transaction_id>')
 def review_transaction(transaction_id):
@@ -153,6 +163,7 @@ def review_transaction(transaction_id):
     date_filter = request.args.get('date_filter', '')
     status_filter = request.args.get('status_filter', '')
     type_filter = request.args.get('type_filter', '')
+    report_id = request.args.get('report_id', '')
     page = request.args.get('page', 1)
     
     # Get related transactions (same cashier, same time period)
@@ -168,6 +179,7 @@ def review_transaction(transaction_id):
                          date_filter=date_filter,
                          status_filter=status_filter,
                          type_filter=type_filter,
+                         report_id=report_id,
                          page=page)
 
 @app.route('/update_review/<int:transaction_id>', methods=['POST'])
