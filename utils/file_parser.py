@@ -53,53 +53,80 @@ def parse_modisoft_file(filepath):
         logging.info(f"Loaded file with {len(df)} total transactions")
         logging.info(f"Columns: {df.columns.tolist()}")
         
-        # Clean up the dataframe - remove header rows and empty columns
-        # Check if first few rows contain headers/titles
-        for skip_rows in range(min(5, len(df))):
-            if df.iloc[skip_rows].astype(str).str.contains('Date|Time|Tran|Transaction', case=False, na=False).any():
-                # Found header row, use it as column names
-                new_columns = df.iloc[skip_rows].tolist()
-                df = df.iloc[skip_rows+1:].reset_index(drop=True)
-                df.columns = new_columns
+        # Clean up the dataframe for Modisoft format
+        # Look for the actual header row with transaction data
+        header_row_index = None
+        for i in range(min(10, len(df))):
+            row_data = df.iloc[i].astype(str)
+            if any(keyword in ' '.join(row_data.values).upper() for keyword in ['TRAN DATE', 'TRANSACTION', 'DATE', 'TIME', 'CASHIER']):
+                header_row_index = i
+                logging.info(f"Found header row at index {i}")
                 break
         
-        # Drop completely empty columns and rows
+        if header_row_index is not None:
+            # Use the found row as column headers
+            df.columns = df.iloc[header_row_index].astype(str)
+            df = df.iloc[header_row_index + 1:].reset_index(drop=True)
+        
+        # Clean column names and remove empty columns
+        df.columns = [str(col).strip() if pd.notna(col) else f"Col_{i}" for i, col in enumerate(df.columns)]
         df = df.dropna(axis=1, how='all').dropna(axis=0, how='all')
         
         logging.info(f"After cleanup: {len(df)} transactions with columns: {df.columns.tolist()}")
         
-        # Define suspicious transaction types
-        suspicious_types = ['VOID', 'NO SALE', 'REFUND', 'DISCOUNT REMOVED', 'NO_SALE', 'VOID_TRANSACTION']
+        # Define suspicious transaction types (Modisoft specific)
+        # Based on your data, we're looking for non-"normal" transaction types
+        suspicious_types = ['VOID', 'NO SALE', 'REFUND', 'DISCOUNT REMOVED', 'NO_SALE', 'VOID_TRANSACTION', 'CANCEL', 'COMP', 'RETURN', 'ADJUSTMENT']
+        # Note: "normal" transactions are regular sales, everything else is potentially suspicious
         
-        # Try to identify columns (flexible column mapping)
+        # Try to identify columns with improved mapping
         column_mapping = identify_columns(df.columns.tolist())
         
-        # If standard mapping fails, search for data patterns
+        # Enhanced pattern search for Modisoft data
         if not column_mapping:
-            logging.info("Standard column mapping failed, searching for data patterns...")
+            logging.info("Standard column mapping failed, searching for Modisoft patterns...")
+            column_mapping = {}
             
-            # Look for transaction type data in any column
+            # Search all data for transaction types
             for col in df.columns:
                 try:
-                    col_values = df[col].astype(str).str.upper()
-                    if any(sus_type in ' '.join(col_values.values) for sus_type in suspicious_types):
+                    col_name = str(col).upper()
+                    sample_data = df[col].astype(str).str.upper().head(20)
+                    
+                    # Check if this column contains transaction types
+                    if any(sus_type in ' '.join(sample_data.values) for sus_type in suspicious_types):
                         column_mapping['transaction_type'] = col
                         logging.info(f"Found transaction types in column: {col}")
-                        break
-                except:
-                    continue
-            
-            # Look for date/time columns
-            for col in df.columns:
-                try:
-                    if 'date' in str(col).lower() or 'time' in str(col).lower():
+                    
+                    # Check for date/time columns
+                    if any(keyword in col_name for keyword in ['DATE', 'TIME', 'TIMESTAMP']):
                         column_mapping['timestamp'] = col
-                        break
-                except:
+                        logging.info(f"Found timestamp column: {col}")
+                    
+                    # Check for amount columns
+                    if any(keyword in col_name for keyword in ['AMOUNT', 'TOTAL', 'PRICE', '$']):
+                        column_mapping['amount'] = col
+                    
+                    # Check for cashier columns
+                    if any(keyword in col_name for keyword in ['CASHIER', 'CLERK', 'EMPLOYEE']):
+                        column_mapping['cashier_id'] = col
+                        
+                    # Check for register columns
+                    if any(keyword in col_name for keyword in ['REGISTER', 'REG', 'TERMINAL']):
+                        column_mapping['register_id'] = col
+                        
+                except Exception as e:
+                    logging.warning(f"Error analyzing column {col}: {e}")
                     continue
         
-        if not column_mapping:
-            raise ValueError("Could not identify required columns in the file")
+        logging.info(f"Final column mapping: {column_mapping}")
+        
+        if not column_mapping or 'transaction_type' not in column_mapping:
+            # Last resort - show user what we found for manual mapping
+            logging.error("Could not automatically identify columns")
+            sample_data = df.head(10).to_string()
+            logging.info(f"Sample data:\n{sample_data}")
+            raise ValueError("Could not identify required columns. Please check the Modisoft export format.")
         
         # Filter for suspicious transactions
         for index, row in df.iterrows():
@@ -107,8 +134,10 @@ def parse_modisoft_file(filepath):
                 # Get transaction type
                 transaction_type = str(row.get(column_mapping.get('transaction_type', ''), '')).upper()
                 
-                # Check if transaction is suspicious
-                is_suspicious = any(sus_type in transaction_type for sus_type in suspicious_types)
+                # For Modisoft: anything that's NOT "normal" is potentially suspicious
+                # Plus check for specific suspicious types
+                is_suspicious = (transaction_type.lower() != 'normal' and transaction_type.lower() != '') or \
+                               any(sus_type in transaction_type for sus_type in suspicious_types)
                 
                 if is_suspicious:
                     # Parse timestamp
@@ -158,12 +187,14 @@ def identify_columns(columns):
     
     # Define possible column name variations
     column_patterns = {
-        'timestamp': ['date', 'time', 'datetime', 'timestamp', 'trans_date', 'trans_time'],
+        'timestamp': ['tran date', 'date', 'time', 'datetime', 'timestamp', 'trans_date', 'trans_time'],
+        'transaction_type': ['tran type', 'type', 'trans_type', 'transaction_type', 'description', 'desc'],
+        'amount': ['gross', 'amount', 'total', 'value', 'sum', 'price', 'net'],
+        'tender': ['tender', 'payment', 'method', 'payment_type'],
+        'discount': ['discount', 'disc', 'reduction'],
         'cashier_id': ['cashier', 'cashier_id', 'employee', 'emp_id', 'clerk', 'operator'],
         'register_id': ['register', 'reg_id', 'terminal', 'pos_id', 'station'],
-        'transaction_type': ['type', 'trans_type', 'transaction_type', 'description', 'desc'],
-        'transaction_id': ['trans_id', 'transaction_id', 'receipt', 'receipt_id', 'id'],
-        'amount': ['amount', 'total', 'value', 'sum', 'price'],
+        'transaction_id': ['trans_id', 'transaction_id', 'receipt', 'receipt_id', 'id', 'tran id'],
         'pump_number': ['pump', 'pump_no', 'pump_number', 'dispenser', 'fueling_point']
     }
     
