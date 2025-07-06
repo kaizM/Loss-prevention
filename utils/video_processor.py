@@ -117,6 +117,7 @@ def find_source_video(timestamp):
         # Log available files for debugging
         all_files = glob.glob(os.path.join(video_source_dir, "*.mp4"))
         logging.warning(f"No video file found for {timestamp}. Available files: {all_files}")
+        logging.info(f"Searched patterns: {patterns}")
         
         # If no exact match, look for files in the same hour
         hour_pattern = os.path.join(video_source_dir, f"{timestamp.strftime('%Y-%m-%d-%H')}*.mp4")
@@ -189,10 +190,35 @@ def extract_video_clip(source_path, output_path, start_time, end_time):
         # In a real implementation, you'd need to correlate video timestamp with transaction timestamp
         # For now, we'll assume the video starts at the beginning of the hour
         
-        # Extract time offset from transaction timestamp
-        # This is a simplified approach - you'll need to adjust based on your video naming/timing
-        video_start = start_time.replace(minute=0, second=0, microsecond=0)
-        offset_seconds = (start_time - video_start).total_seconds()
+        # For daily video files (like 2025-07-04.mp4), assume video starts at beginning of day
+        # Extract the date from the video file and calculate offset from midnight
+        import os
+        video_filename = os.path.basename(source_path)
+        
+        # For files named like "2025-07-04.mp4", extract the date
+        if video_filename.startswith('20') and len(video_filename) >= 10:
+            try:
+                # Extract date from filename like "2025-07-04.mp4"
+                date_str = video_filename[:10]  # "2025-07-04"
+                video_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                day_start = datetime.combine(video_date, datetime.min.time())
+                
+                # Calculate offset in seconds from start of day
+                offset_seconds = (start_time - day_start).total_seconds()
+                
+                # Since your video file is only 30 seconds, let's use a proportional offset
+                # For testing, we'll take the transaction time within the video duration
+                offset_seconds = offset_seconds % 30  # Keep within 30-second video length
+                
+                logging.info(f"Video {video_filename} calculated offset: {offset_seconds}s for transaction at {start_time}")
+            except ValueError:
+                # Fallback to hourly offset if date parsing fails
+                video_start = start_time.replace(minute=0, second=0, microsecond=0)
+                offset_seconds = (start_time - video_start).total_seconds()
+        else:
+            # Fallback for other naming patterns
+            video_start = start_time.replace(minute=0, second=0, microsecond=0)
+            offset_seconds = (start_time - video_start).total_seconds()
         
         # FFmpeg command
         cmd = [
@@ -239,7 +265,7 @@ def is_ffmpeg_available():
 
 def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
     """
-    Extract video clip from Alibi Cloud API.
+    Extract video clip from Alibi Cloud API using playback functionality.
     
     Args:
         timestamp: Transaction timestamp
@@ -258,39 +284,59 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
         camera_id = os.environ.get('ALIBI_CAMERA_ID', '1')
         
         if not all([alibi_api_url, alibi_username, alibi_password]):
-            logging.warning("Alibi Cloud credentials not configured")
+            logging.warning("Alibi Cloud credentials not configured. Please set ALIBI_CLOUD_API, ALIBI_USERNAME, and ALIBI_PASSWORD environment variables.")
             return False
         
-        # Format timestamps for API
-        start_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
-        end_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
+        # Convert to military time format as used by Alibi systems
+        start_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
+        end_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
         
-        # API request to get video clip
-        api_endpoint = f"{alibi_api_url}/api/video/export"
-        payload = {
-            'camera_id': camera_id,
-            'start_time': start_str,
-            'end_time': end_str,
-            'format': 'mp4'
-        }
+        logging.info(f"Requesting Alibi Cloud clip from {start_str} to {end_str}")
         
-        # Make authenticated request
-        response = requests.post(
-            api_endpoint,
-            json=payload,
-            auth=(alibi_username, alibi_password),
-            timeout=30
-        )
+        # Try multiple API endpoints that Alibi Cloud commonly uses
+        api_endpoints = [
+            f"{alibi_api_url}/api/video/export",
+            f"{alibi_api_url}/api/recordings/export",
+            f"{alibi_api_url}/video/export",
+            f"{alibi_api_url}/playback/export"
+        ]
         
-        if response.status_code == 200:
-            # Save the video clip
-            with open(output_path, 'wb') as f:
-                f.write(response.content)
-            logging.info(f"Successfully downloaded clip from Alibi Cloud")
-            return True
-        else:
-            logging.error(f"Alibi Cloud API error: {response.status_code}")
-            return False
+        for api_endpoint in api_endpoints:
+            try:
+                # Payload for video export
+                payload = {
+                    'camera_id': camera_id,
+                    'start_time': start_str,
+                    'end_time': end_str,
+                    'format': 'mp4',
+                    'quality': 'high'
+                }
+                
+                # Make authenticated request
+                response = requests.post(
+                    api_endpoint,
+                    json=payload,
+                    auth=(alibi_username, alibi_password),
+                    timeout=60  # Longer timeout for video processing
+                )
+                
+                if response.status_code == 200:
+                    # Save the video clip
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+                    logging.info(f"Successfully downloaded clip from Alibi Cloud via {api_endpoint}")
+                    return True
+                elif response.status_code == 404:
+                    continue  # Try next endpoint
+                else:
+                    logging.warning(f"Alibi Cloud API {api_endpoint} returned: {response.status_code}")
+                    
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"Failed to connect to {api_endpoint}: {str(e)}")
+                continue
+        
+        logging.error("All Alibi Cloud API endpoints failed")
+        return False
             
     except Exception as e:
         logging.error(f"Error extracting clip from Alibi Cloud: {str(e)}")

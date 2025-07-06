@@ -422,6 +422,40 @@ def process_video_clips(report_id):
     
     logging.info(f"Video processing complete: {processed_count} success, {error_count} errors")
 
+@app.route('/test_video_processing')
+def test_video_processing():
+    """Test video processing with existing transactions"""
+    # Get a transaction from July 4th to test
+    test_transaction = SuspiciousTransaction.query.filter(
+        SuspiciousTransaction.transaction_timestamp >= datetime(2025, 7, 4),
+        SuspiciousTransaction.transaction_timestamp < datetime(2025, 7, 5)
+    ).first()
+    
+    if not test_transaction:
+        flash('No transactions found for July 4th to test', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        logging.info(f"Testing video processing for transaction {test_transaction.id}")
+        clip_path = create_video_clip(test_transaction)
+        if clip_path:
+            test_transaction.video_clip_path = clip_path
+            test_transaction.video_processed = True
+            test_transaction.video_error = None
+            db.session.commit()
+            flash(f'Test successful! Video clip created: {clip_path}', 'success')
+        else:
+            test_transaction.video_error = "Test failed: No video clip created"
+            db.session.commit()
+            flash('Test failed: No video clip created', 'error')
+    except Exception as e:
+        logging.error(f"Test video processing error: {str(e)}")
+        test_transaction.video_error = f"Test error: {str(e)}"
+        db.session.commit()
+        flash(f'Test error: {str(e)}', 'error')
+    
+    return redirect(url_for('review_transaction', transaction_id=test_transaction.id))
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
