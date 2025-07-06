@@ -1,0 +1,254 @@
+/* Custom styles for Loss Prevention System */
+
+/* Video player styling */
+.video-js {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Transaction status badges */
+.transaction-status {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+}
+
+/* File upload area */
+.file-upload-area {
+    border: 2px dashed var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.file-upload-area:hover {
+    border-color: var(--bs-primary);
+    background-color: var(--bs-light);
+}
+
+.file-upload-area.drag-over {
+    border-color: var(--bs-primary);
+    background-color: var(--bs-primary-bg-subtle);
+}
+
+/* Review status indicators */
+.review-status-pending {
+    color: var(--bs-secondary);
+}
+
+.review-status-ok {
+    color: var(--bs-success);
+}
+
+.review-status-review {
+    color: var(--bs-warning);
+}
+
+.review-status-fraud {
+    color: var(--bs-danger);
+}
+
+/* Statistics cards */
+.stat-card {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Table enhancements */
+.table-hover tbody tr:hover {
+    --bs-table-hover-bg: var(--bs-gray-100);
+}
+
+/* Video processing indicators */
+.video-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.video-status .spinner-border {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .stat-card .card-body {
+        padding: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .pagination,
+    .card-header .float-end {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+    
+    .table {
+        border-collapse: collapse;
+    }
+    
+    .table th,
+    .table td {
+        border: 1px solid #000;
+        padding: 0.5rem;
+    }
+}
+
+/* Dark mode enhancements */
+[data-bs-theme="dark"] {
+    .file-upload-area {
+        border-color: var(--bs-gray-600);
+        background-color: var(--bs-gray-800);
+    }
+    
+    .file-upload-area:hover {
+        border-color: var(--bs-primary);
+        background-color: var(--bs-gray-700);
+    }
+    
+    .video-js {
+        background-color: var(--bs-gray-900);
+    }
+}
+
+/* Loading states */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    color: var(--bs-primary);
+}
+
+/* Form enhancements */
+.form-control:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Custom button styles */
+.btn-outline-success:hover {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+}
+
+.btn-outline-warning:hover {
+    background-color: var(--bs-warning);
+    border-color: var(--bs-warning);
+    color: var(--bs-dark);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+
+/* Transaction type badges */
+.transaction-type-void {
+    background-color: #dc3545;
+}
+
+.transaction-type-refund {
+    background-color: #fd7e14;
+}
+
+.transaction-type-no-sale {
+    background-color: #6f42c1;
+}
+
+.transaction-type-discount {
+    background-color: #20c997;
+}
+
+/* Video player controls */
+.vjs-control-bar {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+}
+
+.vjs-big-play-button {
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.8);
+    border: none;
+}
+
+/* Accessibility improvements */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Focus indicators */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Animation utilities */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Review Dashboard - Loss Prevention System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-search me-2"></i>Review Dashboard</h1>
+            <a href="{{ url_for('export_csv') }}" class="btn btn-success">
+                <i class="fas fa-download me-2"></i>Export CSV
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="status" class="form-label">Review Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="ok" {% if status_filter == 'ok' %}selected{% endif %}>OK</option>
+                            <option value="review" {% if status_filter == 'review' %}selected{% endif %}>Needs Review</option>
+                            <option value="fraud" {% if status_filter == 'fraud' %}selected{% endif %}>Fraud</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="type" class="form-label">Transaction Type</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="all" {% if transaction_type_filter == 'all' %}selected{% endif %}>All Types</option>
+                            <option value="VOID" {% if transaction_type_filter == 'VOID' %}selected{% endif %}>VOID</option>
+                            <option value="REFUND" {% if transaction_type_filter == 'REFUND' %}selected{% endif %}>REFUND</option>
+                            <option value="NO SALE" {% if transaction_type_filter == 'NO SALE' %}selected{% endif %}>NO SALE</option>
+                            <option value="DISCOUNT REMOVED" {% if transaction_type_filter == 'DISCOUNT REMOVED' %}selected{% endif %}>DISCOUNT REMOVED</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-2"></i>Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    Suspicious Transactions
+                    <span class="badge bg-secondary ms-2">{{ transactions.total }} total</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if transactions.items %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Type</th>
+                                    <th>Cashier</th>
+                                    <th>Register</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Video</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions.items %}
+                                <tr class="{% if transaction.review_status == 'fraud' %}table-danger{% elif transaction.review_status == 'review' %}table-warning{% elif transaction.review_status == 'ok' %}table-success{% endif %}">
+                                    <td>
+                                        <small class="text-muted">{{ transaction.transaction_timestamp.strftime('%Y-%m-%d') }}</small><br>
+                                        <strong>{{ transaction.transaction_timestamp.strftime('%H:%M:%S') }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning">{{ transaction.transaction_type }}</span>
+                                    </td>
+                                    <td>{{ transaction.cashier_id or 'N/A' }}</td>
+                                    <td>{{ transaction.register_id or 'N/A' }}</td>
+                                    <td>
+                                        {% if transaction.amount %}
+                                            ${{ "%.2f"|format(transaction.amount) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.review_status == 'pending' %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% elif transaction.review_status == 'ok' %}
+                                            <span class="badge bg-success">OK</span>
+                                        {% elif transaction.review_status == 'review' %}
+                                            <span class="badge bg-warning">Review</span>
+                                        {% elif transaction.review_status == 'fraud' %}
+                                            <span class="badge bg-danger">Fraud</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.video_processed and transaction.video_clip_path %}
+                                            <i class="fas fa-video text-success" title="Video available"></i>
+                                        {% elif transaction.video_error %}
+                                            <i class="fas fa-video text-danger" title="Video error: {{ transaction.video_error }}"></i>
+                                        {% else %}
+                                            <i class="fas fa-clock text-muted" title="Processing"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('review_transaction', transaction_id=transaction.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye me-1"></i>Review
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if transactions.pages > 1 %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if transactions.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.prev_num, status=status_filter, type=transaction_type_filter) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in transactions.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != transactions.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('dashboard', page=page_num, status=status_filter, type=transaction_type_filter) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if transactions.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.next_num, status=status_filter, type=transaction_type_filter) }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No suspicious transactions found.</p>
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Upload a Report
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
