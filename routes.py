@@ -463,12 +463,26 @@ def test_live_feed():
 
 @app.route('/live_feed_stream')
 def live_feed_stream():
-    """Stream live video feed"""
-    # This will serve the live RTSP stream
-    rtsp_url = os.environ.get('RTSP_URL', 'rtsp://admin:password@192.168.1.100:554/stream1')
+    """Stream live video feed from Alibi Cloud"""
+    # Get Alibi Cloud settings
+    alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
+    alibi_username = os.environ.get('ALIBI_USERNAME')
+    alibi_password = os.environ.get('ALIBI_PASSWORD')
+    camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')  # Default to camera 4
     
-    # For now, return a test response
-    return f"Live feed URL: {rtsp_url}"
+    if not all([alibi_api_url, alibi_username, alibi_password]):
+        return jsonify({
+            'error': 'Alibi Cloud not configured. Please set ALIBI_CLOUD_API, ALIBI_USERNAME, and ALIBI_PASSWORD in Secrets.'
+        }), 400
+    
+    # Return live stream URL for Alibi Cloud
+    live_url = f"{alibi_api_url}/live/camera/{camera_id}"
+    
+    return jsonify({
+        'live_url': live_url,
+        'camera_id': camera_id,
+        'status': 'configured'
+    })
 
 @app.errorhandler(404)
 def not_found_error(error):

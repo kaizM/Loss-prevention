@@ -281,7 +281,7 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
         alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
         alibi_username = os.environ.get('ALIBI_USERNAME')
         alibi_password = os.environ.get('ALIBI_PASSWORD')
-        camera_id = os.environ.get('ALIBI_CAMERA_ID', '1')
+        camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')  # Default to camera 4 for register area
         
         if not all([alibi_api_url, alibi_username, alibi_password]):
             logging.warning("Alibi Cloud credentials not configured. Please set ALIBI_CLOUD_API, ALIBI_USERNAME, and ALIBI_PASSWORD environment variables.")

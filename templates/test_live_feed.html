@@ -26,20 +26,25 @@
                 <div class="card-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Testing Live Connection</strong>
-                        <p class="mb-0">This will test your live video feed connection. Make sure your camera is powered on and network accessible.</p>
+                        <strong>Testing Alibi Cloud Connection</strong>
+                        <p class="mb-0">This will test your Alibi Cloud connection for Camera 4 (register area). Make sure your Alibi system is accessible and credentials are configured.</p>
                     </div>
                     
-                    <!-- Video Player -->
-                    <div class="video-container mb-3">
-                        <video id="live-video" class="video-js vjs-default-skin w-100" controls preload="none" width="800" height="450"
-                               data-setup='{"fluid": true, "responsive": true}'>
-                            <source src="rtsp://admin:password@192.168.1.100:554/stream1" type="rtmp/mp4">
-                            <p class="vjs-no-js">
-                                To view this video please enable JavaScript, and consider upgrading to a web browser that
-                                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>.
-                            </p>
-                        </video>
+                    <!-- Alibi Cloud Setup Status -->
+                    <div id="alibi-status" class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Alibi Cloud Setup Required</strong>
+                        <p class="mb-2">To view live feed from Camera 4, you need to configure your Alibi Cloud settings.</p>
+                        <p class="mb-0">Go to Secrets (🔐) and add: ALIBI_CLOUD_API, ALIBI_USERNAME, ALIBI_PASSWORD</p>
+                    </div>
+                    
+                    <!-- Live Feed Display -->
+                    <div id="live-feed-container" class="text-center" style="display: none;">
+                        <div class="border rounded p-4 bg-dark text-white">
+                            <h5>Camera 4 - Live Feed</h5>
+                            <p id="feed-status">Connecting...</p>
+                            <div id="feed-display"></div>
+                        </div>
                     </div>
                     
                     <!-- Connection Test Results -->
@@ -88,10 +93,15 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">RTSP URL</label>
-                        <input type="text" class="form-control" id="rtsp-url" 
-                               value="rtsp://admin:password@192.168.1.100:554/stream1"
-                               placeholder="rtsp://username:password@ip:port/stream">
+                        <label class="form-label">Alibi Cloud URL</label>
+                        <input type="text" class="form-control" id="alibi-url" 
+                               placeholder="https://your-alibi-server.com or IP address">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Camera ID</label>
+                        <input type="text" class="form-control" id="camera-id" 
+                               value="4" placeholder="Camera number (4 for register)">
                     </div>
                     
                     <button class="btn btn-warning w-100" onclick="updateStream()">
@@ -134,23 +144,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function testConnection() {
-    showConnectionResult('info', 'Testing connection...');
+    showConnectionResult('info', 'Testing Alibi Cloud connection...');
     
-    fetch('/test_rtsp_url', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            rtsp_url: document.getElementById('rtsp-url').value
-        })
-    })
+    fetch('/live_feed_stream')
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            showConnectionResult('success', 'Connection successful!');
+        if (data.status === 'configured') {
+            showConnectionResult('success', `Connected to Camera ${data.camera_id}!`);
+            document.getElementById('alibi-status').style.display = 'none';
+            document.getElementById('live-feed-container').style.display = 'block';
+            document.getElementById('feed-status').textContent = `Camera ${data.camera_id} - Connected`;
+            document.getElementById('feed-display').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Alibi Cloud connection successful!<br>
+                    Camera ${data.camera_id} is accessible for video processing.
+                </div>
+            `;
         } else {
-            showConnectionResult('error', 'Connection failed: ' + data.error);
+            showConnectionResult('error', 'Connection failed: ' + (data.error || 'Unknown error'));
         }
     })
     .catch(error => {
