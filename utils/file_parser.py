@@ -16,22 +16,87 @@ def parse_modisoft_file(filepath):
     suspicious_transactions = []
     
     try:
-        # Determine file type and read accordingly
+        # Determine file type and read accordingly with better error handling
         if filepath.lower().endswith('.csv'):
-            df = pd.read_csv(filepath)
+            # Try different encodings for CSV
+            for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                try:
+                    df = pd.read_csv(filepath, encoding=encoding)
+                    break
+                except:
+                    continue
+            else:
+                raise ValueError("Could not read CSV file with any encoding")
         elif filepath.lower().endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(filepath)
+            # Try reading Excel with different parameters
+            try:
+                # First try normal read
+                df = pd.read_excel(filepath)
+            except Exception as e1:
+                try:
+                    # Try with different engines
+                    df = pd.read_excel(filepath, engine='openpyxl')
+                except Exception as e2:
+                    try:
+                        # Try reading with xlrd for .xls files
+                        df = pd.read_excel(filepath, engine='xlrd')
+                    except Exception as e3:
+                        try:
+                            # Try skipping problematic rows
+                            df = pd.read_excel(filepath, skiprows=1)
+                        except Exception as e4:
+                            logging.error(f"All Excel reading attempts failed: {e1}, {e2}, {e3}, {e4}")
+                            raise ValueError("Could not read Excel file with any method")
         else:
             raise ValueError("Unsupported file format")
         
         logging.info(f"Loaded file with {len(df)} total transactions")
         logging.info(f"Columns: {df.columns.tolist()}")
         
+        # Clean up the dataframe - remove header rows and empty columns
+        # Check if first few rows contain headers/titles
+        for skip_rows in range(min(5, len(df))):
+            if df.iloc[skip_rows].astype(str).str.contains('Date|Time|Tran|Transaction', case=False, na=False).any():
+                # Found header row, use it as column names
+                new_columns = df.iloc[skip_rows].tolist()
+                df = df.iloc[skip_rows+1:].reset_index(drop=True)
+                df.columns = new_columns
+                break
+        
+        # Drop completely empty columns and rows
+        df = df.dropna(axis=1, how='all').dropna(axis=0, how='all')
+        
+        logging.info(f"After cleanup: {len(df)} transactions with columns: {df.columns.tolist()}")
+        
         # Define suspicious transaction types
         suspicious_types = ['VOID', 'NO SALE', 'REFUND', 'DISCOUNT REMOVED', 'NO_SALE', 'VOID_TRANSACTION']
         
         # Try to identify columns (flexible column mapping)
         column_mapping = identify_columns(df.columns.tolist())
+        
+        # If standard mapping fails, search for data patterns
+        if not column_mapping:
+            logging.info("Standard column mapping failed, searching for data patterns...")
+            
+            # Look for transaction type data in any column
+            for col in df.columns:
+                try:
+                    col_values = df[col].astype(str).str.upper()
+                    if any(sus_type in ' '.join(col_values.values) for sus_type in suspicious_types):
+                        column_mapping['transaction_type'] = col
+                        logging.info(f"Found transaction types in column: {col}")
+                        break
+                except:
+                    continue
+            
+            # Look for date/time columns
+            for col in df.columns:
+                try:
+                    if 'date' in str(col).lower() or 'time' in str(col).lower():
+                        column_mapping['timestamp'] = col
+                        break
+                except:
+                    continue
         
         if not column_mapping:
             raise ValueError("Could not identify required columns in the file")
