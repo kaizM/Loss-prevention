@@ -149,13 +149,24 @@
             <div class="card-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>How to configure RTSP:</strong>
-                    <ol class="mb-0 mt-2">
-                        <li>Find your camera's RTSP URL from its settings</li>
-                        <li>Usually looks like: <code>rtsp://username:password@ip:port/stream1</code></li>
-                        <li>Test the stream in VLC media player first</li>
-                        <li>Add the full URL to Replit Secrets</li>
-                    </ol>
+                    <strong>Based on your camera configuration:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li><strong>IP Address:</strong> 192.168.0.5</li>
+                        <li><strong>RTSP Port:</strong> 1050</li>
+                        <li><strong>Suggested URL:</strong> <code>rtsp://admin:password@192.168.0.5:1050/stream1</code></li>
+                        <li>Replace "password" with your actual camera password</li>
+                        <li>Test in VLC player first to verify the URL works</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Alternative URLs to try:</strong>
+                    <ul class="mb-0">
+                        <li><code>rtsp://admin:pass@192.168.0.5:1050/cam/realmonitor?channel=1&subtype=0</code></li>
+                        <li><code>rtsp://admin:pass@192.168.0.5:1050/live</code></li>
+                        <li><code>rtsp://admin:pass@192.168.0.5:1050/h264</code></li>
+                    </ul>
                 </div>
                 
                 <h6>Required Environment Variable:</h6>
@@ -177,9 +188,43 @@
                 </div>
                 
                 <div class="mt-3">
-                    <button class="btn btn-primary" onclick="configureRTSP()">
-                        <i class="fas fa-cog me-1"></i>Configure RTSP Stream
-                    </button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-primary w-100" onclick="configureRTSP()">
+                                <i class="fas fa-cog me-1"></i>Configure RTSP Stream
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary w-100" onclick="testRTSPQuick()">
+                                <i class="fas fa-play me-1"></i>Quick Test
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Test Form -->
+                    <div class="mt-3" id="rtspTestForm" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6>Test RTSP Connection</h6>
+                                <div class="mb-3">
+                                    <label for="rtspUrl" class="form-label">RTSP URL</label>
+                                    <input type="text" class="form-control" id="rtspUrl" 
+                                           value="rtsp://admin:password@192.168.0.5:1050/stream1"
+                                           placeholder="rtsp://username:password@192.168.0.5:1050/stream1">
+                                    <div class="form-text">Enter your camera credentials</div>
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex">
+                                    <button class="btn btn-success" onclick="testRTSPConnection()">
+                                        <i class="fas fa-play me-1"></i>Test Connection
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="hideRTSPTest()">
+                                        Cancel
+                                    </button>
+                                </div>
+                                <div id="rtspTestResult" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -304,7 +349,46 @@ function configureAlibi() {
 }
 
 function configureRTSP() {
-    alert('To configure RTSP Stream:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add this secret:\n   - RTSP_STREAM_URL: Your full RTSP URL\n   Example: rtsp://admin:password@192.168.1.100:554/stream1\n\n3. Restart the application');
+    alert('To configure your RTSP Stream:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add this secret:\n   - RTSP_STREAM_URL: rtsp://admin:yourpassword@192.168.0.5:1050/stream1\n\n3. Replace "yourpassword" with your actual camera password\n4. Try alternative URLs if the first doesn\'t work\n5. Restart the application');
+}
+
+function testRTSPQuick() {
+    document.getElementById('rtspTestForm').style.display = 'block';
+}
+
+function hideRTSPTest() {
+    document.getElementById('rtspTestForm').style.display = 'none';
+}
+
+function testRTSPConnection() {
+    const rtspUrl = document.getElementById('rtspUrl').value;
+    const resultDiv = document.getElementById('rtspTestResult');
+    
+    if (!rtspUrl) {
+        resultDiv.innerHTML = '<div class="alert alert-danger">Please enter an RTSP URL</div>';
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Testing connection...</div>';
+    
+    fetch('/test_rtsp_url', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({rtsp_url: rtspUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>' + data.error + '</div>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Test failed: ' + error + '</div>';
+    });
 }
 </script>
 {% endblock %}

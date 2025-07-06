@@ -1,4 +1,5 @@
 import os
+import subprocess
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
 from werkzeug.utils import secure_filename
@@ -284,6 +285,32 @@ def test_video_connection_route():
     """AJAX endpoint to test video connections"""
     status = test_video_connection()
     return jsonify(status)
+
+@app.route('/test_rtsp_url', methods=['POST'])
+def test_rtsp_url():
+    """Test a specific RTSP URL"""
+    rtsp_url = request.json.get('rtsp_url')
+    
+    if not rtsp_url:
+        return jsonify({'success': False, 'error': 'No RTSP URL provided'})
+    
+    try:
+        # Test RTSP connection using FFprobe
+        cmd = ['ffprobe', '-v', 'quiet', '-rtsp_transport', 'tcp', '-i', rtsp_url, '-t', '2']
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        success = result.returncode == 0
+        
+        return jsonify({
+            'success': success,
+            'message': 'RTSP connection successful' if success else 'RTSP connection failed',
+            'error': result.stderr if not success else None
+        })
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Connection timeout'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 def process_video_clips(report_id):
     """Process video clips for all suspicious transactions in a report"""
