@@ -19,9 +19,9 @@ def create_video_clip(transaction):
         str: Path to created video clip or None if failed
     """
     try:
-        # Calculate clip start and end times
-        clip_start = transaction.transaction_timestamp - timedelta(seconds=5)
-        clip_end = transaction.transaction_timestamp + timedelta(seconds=10)
+        # Calculate clip start and end times (90 seconds before, 30 seconds after)
+        clip_start = transaction.transaction_timestamp - timedelta(seconds=90)
+        clip_end = transaction.transaction_timestamp + timedelta(seconds=30)
         
         # Create output filename
         output_filename = f"{transaction.transaction_type.replace(' ', '_')}_{transaction.transaction_timestamp.strftime('%Y-%m-%d_%H-%M-%S')}_Cashier{transaction.cashier_id or 'Unknown'}.mp4"
@@ -80,12 +80,28 @@ def find_source_video(timestamp):
     try:
         video_source_dir = current_app.config['VIDEO_SOURCE_FOLDER']
         
-        # Common video file patterns
+        # Common video file patterns with various naming conventions
         patterns = [
+            # Exact time matches
             f"{timestamp.strftime('%Y-%m-%d-%H-%M')}.mp4",
             f"{timestamp.strftime('%Y%m%d_%H%M')}.mp4",
+            f"{timestamp.strftime('%Y-%m-%d_%H-%M-%S')}.mp4",
+            f"{timestamp.strftime('%Y%m%d_%H%M%S')}.mp4",
+            
+            # Daily files (common for 24-hour recordings)
+            f"{timestamp.strftime('%Y-%m-%d')}.mp4",
+            f"{timestamp.strftime('%Y%m%d')}.mp4",
             f"{timestamp.strftime('%Y-%m-%d')}*.mp4",
-            f"{timestamp.strftime('%Y%m%d')}*.mp4"
+            f"{timestamp.strftime('%Y%m%d')}*.mp4",
+            
+            # Hourly files
+            f"{timestamp.strftime('%Y-%m-%d-%H')}*.mp4",
+            f"{timestamp.strftime('%Y%m%d_%H')}*.mp4",
+            
+            # Common camera naming patterns
+            f"cam1_{timestamp.strftime('%Y%m%d')}.mp4",
+            f"camera1_{timestamp.strftime('%Y-%m-%d')}.mp4",
+            f"recording_{timestamp.strftime('%Y%m%d')}.mp4"
         ]
         
         # Search for matching files
@@ -95,7 +111,12 @@ def find_source_video(timestamp):
             
             if matches:
                 # Return the first match (could be enhanced to find best match)
+                logging.info(f"Found video file match: {matches[0]} for pattern: {pattern}")
                 return matches[0]
+        
+        # Log available files for debugging
+        all_files = glob.glob(os.path.join(video_source_dir, "*.mp4"))
+        logging.warning(f"No video file found for {timestamp}. Available files: {all_files}")
         
         # If no exact match, look for files in the same hour
         hour_pattern = os.path.join(video_source_dir, f"{timestamp.strftime('%Y-%m-%d-%H')}*.mp4")

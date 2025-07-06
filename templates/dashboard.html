@@ -20,7 +20,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="GET" class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="status" class="form-label">Review Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
@@ -30,7 +30,7 @@
                             <option value="fraud" {% if status_filter == 'fraud' %}selected{% endif %}>Fraud</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="type" class="form-label">Transaction Type</label>
                         <select class="form-select" id="type" name="type">
                             <option value="all" {% if transaction_type_filter == 'all' %}selected{% endif %}>All Types</option>
@@ -40,9 +40,13 @@
                             <option value="DISCOUNT REMOVED" {% if transaction_type_filter == 'DISCOUNT REMOVED' %}selected{% endif %}>DISCOUNT REMOVED</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="date_filter" class="form-label">Date Filter</label>
                         <input type="date" class="form-control" id="date_filter" name="date_filter" value="{{ date_filter }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="cashier_filter" class="form-label">Cashier ID</label>
+                        <input type="text" class="form-control" id="cashier_filter" name="cashier" value="{{ cashier_filter }}" placeholder="Enter Cashier ID">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">&nbsp;</label>
@@ -80,6 +84,9 @@
                     {% endif %}
                     {% if transaction_type_filter != 'all' %}
                         <span class="badge bg-primary ms-2">{{ transaction_type_filter }}</span>
+                    {% endif %}
+                    {% if cashier_filter %}
+                        <span class="badge bg-info ms-2">Cashier: {{ cashier_filter }}</span>
                     {% endif %}
                 </h5>
             </div>
@@ -144,6 +151,7 @@
                                                             status_filter=request.args.get('status', ''),
                                                             type_filter=request.args.get('type', ''),
                                                             report_id=request.args.get('report_id', ''),
+                                                            cashier=request.args.get('cashier', ''),
                                                             page=request.args.get('page', 1)) }}" 
                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye me-1"></i>Review
@@ -161,7 +169,7 @@
                         <ul class="pagination justify-content-center">
                             {% if transactions.has_prev %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.prev_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id) }}">Previous</a>
+                                    <a class="page-link" href="{{ url_for('dashboard', page=transactions.prev_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id, cashier=cashier_filter) }}">Previous</a>
                                 </li>
                             {% endif %}
                             
@@ -169,7 +177,7 @@
                                 {% if page_num %}
                                     {% if page_num != transactions.page %}
                                         <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('dashboard', page=page_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id) }}">{{ page_num }}</a>
+                                            <a class="page-link" href="{{ url_for('dashboard', page=page_num, status=status_filter, type=transaction_type_filter, date_filter=date_filter, report_id=report_id, cashier=cashier_filter) }}">{{ page_num }}</a>
                                         </li>
                                     {% else %}
                                         <li class="page-item active">

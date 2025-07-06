@@ -87,7 +87,8 @@ def upload_file():
                 
                 flash(f'File processed successfully! Found {len(suspicious_transactions)} suspicious transactions.', 'success')
                 
-                # Start video processing in background (simplified for demo)
+                # Process video clips for each transaction
+                flash('Starting video processing...', 'info')
                 process_video_clips(report.id)
                 
                 return redirect(url_for('dashboard'))
@@ -110,6 +111,7 @@ def dashboard():
     transaction_type_filter = request.args.get('type', 'all')
     date_filter = request.args.get('date_filter', '')
     report_id = request.args.get('report_id', '', type=str)
+    cashier_filter = request.args.get('cashier', '', type=str)
     
     # Build query
     query = SuspiciousTransaction.query
@@ -119,6 +121,10 @@ def dashboard():
     
     if transaction_type_filter != 'all':
         query = query.filter_by(transaction_type=transaction_type_filter)
+    
+    # Add cashier filtering
+    if cashier_filter:
+        query = query.filter_by(cashier_id=cashier_filter)
     
     # Add report ID filtering (specific report)
     if report_id:
@@ -152,7 +158,8 @@ def dashboard():
                          status_filter=status_filter,
                          transaction_type_filter=transaction_type_filter,
                          date_filter=date_filter,
-                         report_id=report_id)
+                         report_id=report_id,
+                         cashier_filter=cashier_filter)
 
 @app.route('/review/<int:transaction_id>')
 def review_transaction(transaction_id):
@@ -164,6 +171,7 @@ def review_transaction(transaction_id):
     status_filter = request.args.get('status_filter', '')
     type_filter = request.args.get('type_filter', '')
     report_id = request.args.get('report_id', '')
+    cashier_filter = request.args.get('cashier', '')
     page = request.args.get('page', 1)
     
     # Get related transactions (same cashier, same time period)
@@ -180,6 +188,7 @@ def review_transaction(transaction_id):
                          status_filter=status_filter,
                          type_filter=type_filter,
                          report_id=report_id,
+                         cashier_filter=cashier_filter,
                          page=page)
 
 @app.route('/update_review/<int:transaction_id>', methods=['POST'])
@@ -386,20 +395,32 @@ def test_rtsp_url():
 def process_video_clips(report_id):
     """Process video clips for all suspicious transactions in a report"""
     transactions = SuspiciousTransaction.query.filter_by(report_id=report_id).all()
+    processed_count = 0
+    error_count = 0
+    
+    logging.info(f"Processing video clips for {len(transactions)} transactions in report {report_id}")
     
     for transaction in transactions:
         try:
+            logging.info(f"Processing video for transaction {transaction.id} at {transaction.transaction_timestamp}")
             clip_path = create_video_clip(transaction)
             if clip_path:
                 transaction.video_clip_path = clip_path
                 transaction.video_processed = True
+                processed_count += 1
+                logging.info(f"Successfully created video clip: {clip_path}")
             else:
-                transaction.video_error = "No matching video found"
+                transaction.video_error = "No matching video source found for this timestamp"
+                error_count += 1
+                logging.warning(f"No video source found for transaction {transaction.id}")
         except Exception as e:
             logging.error(f"Error creating video clip for transaction {transaction.id}: {str(e)}")
             transaction.video_error = str(e)
+            error_count += 1
         
         db.session.commit()
+    
+    logging.info(f"Video processing complete: {processed_count} success, {error_count} errors")
 
 @app.errorhandler(404)
 def not_found_error(error):
