@@ -25,20 +25,26 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Perfect Solution!</strong> Since your Alibi system has web playback, we can integrate directly with that interface.
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        <strong>Perfect Solution!</strong> Use your Alibi Witness app for easy mobile video access and downloading.
                     </div>
                     
-                    <!-- Alibi Web Interface -->
+                    <!-- Alibi Access Options -->
                     <div class="mb-4">
-                        <h6>Access Your Alibi Web Interface</h6>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" id="alibi-web-url" 
-                                   value="http://gngpalacios.alibiddns.com:8000" readonly>
-                            <button class="btn btn-primary" onclick="openAlibiWeb()">
-                                <i class="fas fa-external-link-alt me-2"></i>Open Alibi Web
-                            </button>
+                        <h6>Access Your Alibi System</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <button class="btn btn-primary w-100" onclick="openAlibiWitnessInfo()">
+                                    <i class="fas fa-mobile-alt me-2"></i>Alibi Witness App
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button class="btn btn-secondary w-100" onclick="openAlibiWeb()">
+                                    <i class="fas fa-desktop me-2"></i>Web Interface
+                                </button>
+                            </div>
                         </div>
+                        <input type="hidden" id="alibi-web-url" value="http://gngpalacios.alibiddns.com:8000">
                     </div>
 
                     <!-- Current Suspicious Transactions -->
@@ -57,15 +63,29 @@
                     <div class="card bg-light">
                         <div class="card-body">
                             <h6><i class="fas fa-lightbulb me-2"></i>How to Use This Integration</h6>
-                            <ol>
-                                <li><strong>Click "Open Alibi Web"</strong> to access your DVR web interface</li>
-                                <li><strong>Login</strong> with your admin credentials</li>
-                                <li><strong>Navigate to Playback</strong> in the Alibi interface</li>
-                                <li><strong>Select Camera 4</strong> (register camera)</li>
-                                <li><strong>Use the timestamps below</strong> to find suspicious transactions</li>
-                                <li><strong>Download clips</strong> (90 seconds before + 30 seconds after)</li>
-                                <li><strong>Upload clips</strong> to this system for review</li>
-                            </ol>
+                            
+                            <div class="mb-3">
+                                <strong>Option 1: Alibi Witness App (Recommended)</strong>
+                                <ol>
+                                    <li><strong>Open Alibi Witness</strong> app on your phone</li>
+                                    <li><strong>Login</strong> to your DVR system</li>
+                                    <li><strong>Go to Playback</strong> section</li>
+                                    <li><strong>Select Camera 4</strong> (register camera)</li>
+                                    <li><strong>Use timestamps below</strong> to navigate</li>
+                                    <li><strong>Export/Share clips</strong> directly from the app</li>
+                                    <li><strong>Upload clips</strong> here for review</li>
+                                </ol>
+                            </div>
+                            
+                            <div>
+                                <strong>Option 2: Web Interface</strong>
+                                <ol>
+                                    <li><strong>Click "Web Interface"</strong> button above</li>
+                                    <li><strong>Login</strong> with admin credentials</li>
+                                    <li><strong>Navigate to Playback</strong> section</li>
+                                    <li><strong>Use timestamps below</strong> for quick navigation</li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -139,6 +159,26 @@
 
 <script>
 let pendingTransactions = [];
+
+function openAlibiWitnessInfo() {
+    alert(`
+Alibi Witness App Instructions:
+
+1. Open the Alibi Witness app on your phone
+2. Login to your DVR system:
+   - Server: gngpalacios.alibiddns.com:8000
+   - Username: admin
+   - Password: [your password]
+
+3. Navigate to Playback section
+4. Select Camera 4 (Register area)
+5. Use the timestamps shown below to find suspicious transactions
+6. Export clips directly from the app
+7. Upload clips to this system for review
+
+The app makes it easy to export and share video clips!
+    `);
+}
 
 function openAlibiWeb() {
     const url = document.getElementById('alibi-web-url').value;
@@ -215,16 +255,23 @@ function navigateToTimestamp(startTime, endTime, transactionId) {
     const end = new Date(endTime);
     
     alert(`
-Alibi Playback Instructions:
+Video Clip Instructions:
 
-1. In your Alibi web interface:
-   - Select Camera 4 (Register)
-   - Navigate to: ${start.toLocaleDateString()} ${start.toLocaleTimeString()}
-   - Start time: ${start.toLocaleTimeString()}
-   - End time: ${end.toLocaleTimeString()}
+📱 ALIBI WITNESS APP (Recommended):
+1. Open Alibi Witness app
+2. Go to Playback → Camera 4
+3. Date: ${start.toLocaleDateString()}
+4. Time: ${start.toLocaleTimeString()} to ${end.toLocaleTimeString()}
+5. Export/Share the clip
+6. Upload to this system
 
-2. Download the clip and upload it here
-3. Transaction ID: ${transactionId}
+💻 WEB INTERFACE:
+1. Login to gngpalacios.alibiddns.com:8000
+2. Playback → Camera 4
+3. Same date/time as above
+
+Transaction ID: ${transactionId}
+Duration: 2 minutes (90 sec before + 30 sec after)
     `);
 }
 
