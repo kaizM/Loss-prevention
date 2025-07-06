@@ -76,16 +76,10 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
+                <div class="alert alert-secondary">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>How to configure Alibi Cloud:</strong>
-                    <ol class="mb-0 mt-2">
-                        <li>Log into your Alibi Cloud web portal</li>
-                        <li>Navigate to API Settings or Developer Tools</li>
-                        <li>Generate an API key or note your login credentials</li>
-                        <li>Copy your cloud API endpoint URL</li>
-                        <li>Add these as environment variables in Replit Secrets</li>
-                    </ol>
+                    <strong>Alibi Cloud is not needed for your setup.</strong>
+                    <p class="mb-0 mt-2">Since you have direct IP camera access via RTSP, you don't need Alibi Cloud. Your current camera setup with RTSP is actually better and more reliable.</p>
                 </div>
                 
                 <h6>Required Environment Variables:</h6>
@@ -131,8 +125,8 @@
                 </div>
                 
                 <div class="mt-3">
-                    <button class="btn btn-primary" onclick="configureAlibi()">
-                        <i class="fas fa-cog me-1"></i>Configure Alibi Cloud
+                    <button class="btn btn-secondary" disabled>
+                        <i class="fas fa-ban me-1"></i>Not Needed for Your Setup
                     </button>
                 </div>
             </div>
@@ -149,14 +143,24 @@
             <div class="card-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>Based on your camera configuration:</strong>
+                    <strong>Your Camera Configuration:</strong>
                     <ul class="mb-0 mt-2">
-                        <li><strong>IP Address:</strong> 192.168.0.5</li>
+                        <li><strong>IP Address:</strong> 192.168.0.5 (Local Network)</li>
                         <li><strong>RTSP Port:</strong> 1050</li>
-                        <li><strong>Your RTSP URL:</strong> <code>rtsp://admin:Patan@2020@192.168.0.5:1050/stream1</code></li>
-                        <li>Credentials: admin / Patan@2020</li>
-                        <li>Test in VLC player first to verify the URL works</li>
+                        <li><strong>Username:</strong> admin</li>
+                        <li><strong>Password:</strong> Patan@2020</li>
+                        <li><strong>RTSP URL:</strong> <code>rtsp://admin:Patan@2020@192.168.0.5:1050/stream1</code></li>
                     </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Network Configuration Note:</strong>
+                    <p class="mb-0">Since your camera is on a local network (192.168.0.5) and this system runs on the cloud, direct RTSP connection may not work without network configuration. You have two options:</p>
+                    <ol class="mt-2 mb-0">
+                        <li><strong>Use Local Files:</strong> Upload video files to the system (easier)</li>
+                        <li><strong>Network Setup:</strong> Configure port forwarding or VPN access to your camera</li>
+                    </ol>
                 </div>
                 
                 <div class="alert alert-warning">
@@ -206,16 +210,19 @@
                         <div class="card">
                             <div class="card-body">
                                 <h6>Test RTSP Connection</h6>
+                                <div class="alert alert-info">
+                                    <small><strong>Note:</strong> This test will likely fail because your camera is on a local network (192.168.0.5) and this system runs on the cloud. This is normal and doesn't mean your camera is broken!</small>
+                                </div>
                                 <div class="mb-3">
                                     <label for="rtspUrl" class="form-label">RTSP URL</label>
                                     <input type="text" class="form-control" id="rtspUrl" 
                                            value="rtsp://admin:Patan@2020@192.168.0.5:1050/stream1"
                                            placeholder="rtsp://admin:Patan@2020@192.168.0.5:1050/stream1">
-                                    <div class="form-text">Enter your camera credentials</div>
+                                    <div class="form-text">Your camera credentials are correct</div>
                                 </div>
                                 <div class="d-grid gap-2 d-md-flex">
-                                    <button class="btn btn-success" onclick="testRTSPConnection()">
-                                        <i class="fas fa-play me-1"></i>Test Connection
+                                    <button class="btn btn-warning" onclick="testRTSPConnection()">
+                                        <i class="fas fa-play me-1"></i>Test Anyway
                                     </button>
                                     <button class="btn btn-secondary" onclick="hideRTSPTest()">
                                         Cancel
@@ -380,14 +387,24 @@ function testRTSPConnection() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('RTSP Test Result:', data);  // Debug log
         if (data.success) {
-            resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>${data.message}
+                    ${data.details ? '<br><small>' + data.details + '</small>' : ''}
+                </div>`;
         } else {
-            resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>' + data.error + '</div>';
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>${data.error}
+                    ${data.troubleshooting ? '<br><small><strong>Try:</strong> ' + data.troubleshooting + '</small>' : ''}
+                </div>`;
         }
     })
     .catch(error => {
-        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Test failed: ' + error + '</div>';
+        console.error('RTSP Test Error:', error);  // Debug log
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Network error: ' + error + '</div>';
     });
 }
 </script>

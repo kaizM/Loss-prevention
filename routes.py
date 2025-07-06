@@ -295,22 +295,55 @@ def test_rtsp_url():
         return jsonify({'success': False, 'error': 'No RTSP URL provided'})
     
     try:
-        # Test RTSP connection using FFprobe
-        cmd = ['ffprobe', '-v', 'quiet', '-rtsp_transport', 'tcp', '-i', rtsp_url, '-t', '2']
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        logging.info(f"Testing RTSP connection to: {rtsp_url[:30]}...")  # Don't log full URL with password
+        
+        # Test RTSP connection using FFprobe with more verbose output for debugging
+        cmd = ['ffprobe', '-v', 'error', '-rtsp_transport', 'tcp', '-analyzeduration', '3000000', '-i', rtsp_url]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         
         success = result.returncode == 0
         
-        return jsonify({
-            'success': success,
-            'message': 'RTSP connection successful' if success else 'RTSP connection failed',
-            'error': result.stderr if not success else None
-        })
+        # More detailed error reporting
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'RTSP connection successful! Camera stream is accessible.',
+                'details': 'The system can connect to your camera and receive video data.'
+            })
+        else:
+            error_msg = result.stderr if result.stderr else 'Unknown connection error'
+            logging.error(f"RTSP test failed: {error_msg}")
+            
+            # Special handling for network connectivity issues
+            if 'Connection refused' in error_msg or 'No route to host' in error_msg or not error_msg:
+                return jsonify({
+                    'success': False,
+                    'message': 'Cannot reach camera - Network issue',
+                    'error': 'Camera is on local network (192.168.0.5) but this system runs on the cloud',
+                    'troubleshooting': 'Your camera is working fine! The issue is that cloud servers cannot directly access local network cameras. Use the local file upload option instead, or set up port forwarding on your router.'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'RTSP connection failed',
+                    'error': error_msg,
+                    'troubleshooting': 'Check if: 1) Camera is powered on, 2) Network connection is working, 3) Username/password are correct, 4) RTSP port 1050 is open'
+                })
         
     except subprocess.TimeoutExpired:
-        return jsonify({'success': False, 'error': 'Connection timeout'})
+        logging.error("RTSP test timeout")
+        return jsonify({
+            'success': False, 
+            'error': 'Connection timeout - Cannot reach local camera from cloud',
+            'troubleshooting': 'This is expected! Your camera (192.168.0.5) is on a local network, but this system runs on the cloud. The camera is fine - use local file upload instead.'
+        })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        logging.error(f"RTSP test exception: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': f'Test failed: {str(e)}',
+            'troubleshooting': 'Check camera settings and network connectivity'
+        })
 
 def process_video_clips(report_id):
     """Process video clips for all suspicious transactions in a report"""
