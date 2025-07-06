@@ -1,0 +1,89 @@
+Perfect — that clears everything up!
+
+You want a simple, low-maintenance system that:
+
+Doesn’t require messing with Gilbarco internals.
+Uses Modisoft’s end-of-day transaction report (received via email or file).
+Automatically parses that file, identifies suspicious transactions (e.g., voids, refunds, no-sales).
+Uses timestamps to locate and clip video from your camera system.
+Saves those clips to a web-based dashboard that you can access from both web and Android (and iPhone via browser).
+Lets you review, score, and flag suspicious activity without installing anything.
+✅ Here's the Solid Plan You Can Build
+
+We'll break this into 4 components:
+
+📂 1. FILE HANDLING (Modisoft Daily Report)
+You (or the system) upload the CSV or Excel file you get from Modisoft.
+The system parses that file and filters for:
+VOID
+NO SALE
+REFUND
+DISCOUNT REMOVED
+Extract:
+Timestamp
+Cashier ID / Register
+Transaction type
+Transaction ID or pump # (if available)
+🎥 2. VIDEO CLIP MATCHING (Camera Playback)
+Your cameras run 24/7 recording to a local NAS or cloud storage.
+Each video file is named or timestamped.
+When a suspicious transaction is detected:
+Match it with the corresponding camera footage (based on timestamp).
+Extract a short clip (e.g. 5 seconds before and 10 after).
+Save as: VOID_07-05-2025_13-24-Cashier3.mp4
+Tech stack options:
+
+Use FFmpeg to cut from raw video files.
+Save clip in a folder like /clips/2025-07-05/.
+🌐 3. WEB + MOBILE VIEWER (Dashboard)
+Build a web app (that works on Android and iPhone via browser):
+
+Login Page (optional if internal use only)
+Clip List with filters:
+Date, Cashier, Transaction Type
+Video Player + Metadata Panel
+Agent Buttons:
+✅ OK
+⚠️ Review
+❌ Fraud
+Optional Comments or Tagging
+Tech stack:
+
+Frontend: React.js or simple HTML + Bootstrap (Replit compatible)
+Backend: Python (Flask) or Node.js (Express)
+Database: SQLite or Firebase (for simplicity)
+Hosting: Replit, Vercel, or any VPS (later move to Android if needed)
+🧠 4. SCORING, AUDIT & EXPORT
+Store every flagged clip + review decision.
+Build a “Reports” page:
+Show fraud by cashier, time of day, etc.
+Allow exporting data:
+CSV of flagged events with links to video.
+🧱 SYSTEM FLOW
+
+[Modisoft Daily File (CSV)] ───▶ [Upload or Email]
+                                  ↓
+                   [Parse Suspicious Transactions]
+                                  ↓
+                [Match Timestamps to Camera Footage]
+                                  ↓
+                    [Create Video Clips (FFmpeg)]
+                                  ↓
+               [Save Clips to Web Folder/Cloud Drive]
+                                  ↓
+               [Web Dashboard: Review & Scoring UI]
+                                  ↓
+                       [Flag / Report / Export]
+✅ What You Need to Start
+
+✅ A sample CSV or Excel file from Modisoft
+(You can upload it here or describe the structure)
+✅ Location of your camera footage or sample naming convention
+(e.g., do your files look like 2025-07-05-13-25.mp4?)
+📦 Deliverables I Can Build for You:
+
+✅ Replit-ready Python Flask + HTML UI
+✅ Script to parse Modisoft file and identify bad transactions
+✅ FFmpeg script to extract matching clips
+✅ Web dashboard that lists and plays clips
+✅ Mobile-friendly layout (no app needed)
