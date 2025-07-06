@@ -8,7 +8,7 @@ This is a Flask-based loss prevention system designed to automatically detect an
 
 ### Backend Architecture
 - **Framework**: Flask with SQLAlchemy ORM
-- **Database**: PostgreSQL (Neon-backed, built-in Replit database)
+- **Database**: SQLite (local file-based database for privacy)
 - **File Processing**: Pandas for CSV/Excel parsing
 - **Video Processing**: FFmpeg for video clip extraction
 - **Storage**: Local filesystem for video clips and uploads
@@ -106,7 +106,7 @@ Recent Changes:
   * Added "Clear Filters" button for easy navigation
   * Fixed context preservation when reviewing transactions
   * Added smart filtering badges to show active filters
-  * Upgraded to PostgreSQL database for better performance and reliability
+  * Configured with SQLite database for local, private data storage
 - July 06, 2025: Enhanced video processing system
   * Added Alibi Cloud API integration for direct video clip extraction
   * Added RTSP stream support for live camera feeds
