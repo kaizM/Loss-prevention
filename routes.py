@@ -464,30 +464,85 @@ def test_live_feed():
 @app.route('/live_feed_stream')
 def live_feed_stream():
     """Stream live video feed from Local Alibi DVR"""
-    # Get Local Alibi DVR settings
-    alibi_dvr_ip = os.environ.get('ALIBI_DVR_IP', '192.168.1.100')
+    # Get Alibi DVR settings using your actual connection details
+    alibi_dvr_host = os.environ.get('ALIBI_DVR_HOST', 'gngpalacios.alibiddns.com')
+    alibi_dvr_port = os.environ.get('ALIBI_DVR_PORT', '8000')
     alibi_username = os.environ.get('ALIBI_USERNAME', 'admin')
     alibi_password = os.environ.get('ALIBI_PASSWORD', 'password')
     camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')  # Default to camera 4
     
-    # Try different common Alibi DVR ports and URLs
-    common_ports = ['80', '8080', '8000', '554']
-    
-    for port in common_ports:
-        try:
-            # Test connection to DVR
-            import requests
-            test_url = f"http://{alibi_dvr_ip}:{port}"
-            response = requests.get(test_url, timeout=5)
-            if response.status_code == 200:
-                return jsonify({
-                    'dvr_url': test_url,
-                    'camera_id': camera_id,
-                    'status': 'local_dvr_found',
-                    'port': port
-                })
-        except:
-            continue
+    # Test connection to your DVR with multiple authentication methods
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+        
+        test_url = f"http://{alibi_dvr_host}:{alibi_dvr_port}"
+        
+        # Try different authentication methods
+        auth_methods = [
+            HTTPBasicAuth(alibi_username, alibi_password),
+            HTTPDigestAuth(alibi_username, alibi_password),
+            None  # No auth
+        ]
+        
+        # Try different common endpoints
+        endpoints = [
+            '',
+            '/index.html',
+            '/login',
+            '/cgi-bin/main-cgi',
+            '/web'
+        ]
+        
+        last_error = None
+        
+        for auth in auth_methods:
+            for endpoint in endpoints:
+                try:
+                    full_url = test_url + endpoint
+                    response = requests.get(
+                        full_url, 
+                        auth=auth, 
+                        timeout=10,
+                        allow_redirects=True,
+                        verify=False  # Skip SSL verification for local DVR
+                    )
+                    
+                    if response.status_code in [200, 401, 403]:  # 401/403 means DVR is responding
+                        return jsonify({
+                            'dvr_url': test_url,
+                            'camera_id': camera_id,
+                            'status': 'dvr_responding',
+                            'port': alibi_dvr_port,
+                            'host': alibi_dvr_host,
+                            'auth_required': response.status_code in [401, 403],
+                            'endpoint': endpoint,
+                            'status_code': response.status_code
+                        })
+                        
+                except requests.exceptions.ConnectionError as e:
+                    last_error = f"Connection refused - DVR may be offline or firewalled"
+                    continue
+                except requests.exceptions.Timeout as e:
+                    last_error = f"Connection timeout - DVR not responding"
+                    continue
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+        
+        return jsonify({
+            'error': last_error or 'All connection attempts failed',
+            'dvr_url': test_url,
+            'status': 'connection_failed',
+            'help': 'Check if DVR is online and accessible from this network'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Configuration error: {str(e)}',
+            'dvr_url': test_url,
+            'status': 'config_error'
+        })
     
     return jsonify({
         'error': 'Local Alibi DVR not found. Please check network connection and IP address.',

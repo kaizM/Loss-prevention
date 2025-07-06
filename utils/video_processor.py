@@ -277,8 +277,9 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
         bool: True if successful, False otherwise
     """
     try:
-        # Get Local Alibi DVR settings
-        alibi_dvr_ip = os.environ.get('ALIBI_DVR_IP', '192.168.1.100')
+        # Get Alibi DVR settings using your actual connection details
+        alibi_dvr_host = os.environ.get('ALIBI_DVR_HOST', 'gngpalacios.alibiddns.com')
+        alibi_dvr_port = os.environ.get('ALIBI_DVR_PORT', '8000')
         alibi_username = os.environ.get('ALIBI_USERNAME', 'admin')
         alibi_password = os.environ.get('ALIBI_PASSWORD', 'password')
         camera_id = os.environ.get('ALIBI_CAMERA_ID', '4')
@@ -287,21 +288,23 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
         start_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
         end_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
         
-        logging.info(f"Requesting clip from local DVR {alibi_dvr_ip} for Camera {camera_id}")
+        logging.info(f"Requesting clip from DVR {alibi_dvr_host}:{alibi_dvr_port} for Camera {camera_id}")
         logging.info(f"Time range: {start_str} to {end_str}")
         
-        # Try different common DVR ports and endpoints
-        common_configs = [
-            {'port': '80', 'path': '/cgi-bin/videodownload.cgi'},
-            {'port': '8080', 'path': '/video/download'},
-            {'port': '8000', 'path': '/api/video/export'},
-            {'port': '80', 'path': '/playback/download'}
+        # Try different Alibi DVR endpoints for your system
+        common_paths = [
+            '/cgi-bin/videodownload.cgi',
+            '/api/video/export',
+            '/video/download',
+            '/playback/download',
+            '/cgi-bin/playback.cgi',
+            '/download/video'
         ]
         
-        for config in common_configs:
+        for path in common_paths:
             try:
-                # Build URL for video download
-                dvr_url = f"http://{alibi_dvr_ip}:{config['port']}{config['path']}"
+                # Build URL for video download using your actual DVR details
+                dvr_url = f"http://{alibi_dvr_host}:{alibi_dvr_port}{path}"
                 
                 # Parameters for video export
                 params = {
@@ -337,11 +340,17 @@ def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
                 logging.warning(f"Failed to connect to DVR at {dvr_url}: {str(e)}")
                 continue
         
-        logging.error("All DVR endpoints failed - will try alternative methods")
+        logging.info("DVR web interface not accessible from cloud server - this is normal for security")
+        logging.info("Trying RTSP connection as alternative method")
         
-        # Alternative: Use RTSP to record clip (requires FFmpeg)
-        rtsp_url = f"rtsp://{alibi_username}:{alibi_password}@{alibi_dvr_ip}:554/cam{camera_id}"
-        return extract_clip_from_rtsp(rtsp_url, timestamp, output_path, start_time, end_time)
+        # Alternative: Use RTSP to record clip using your DVR details
+        rtsp_url = f"rtsp://{alibi_username}:{alibi_password}@{alibi_dvr_host}:554/cam{camera_id}"
+        if extract_clip_from_rtsp(rtsp_url, timestamp, output_path, start_time, end_time):
+            return True
+        
+        logging.info("RTSP also not accessible from cloud - this is expected for remote DVR systems")
+        logging.info("Recommend uploading daily video files or using local network processing")
+        return False
             
     except Exception as e:
         logging.error(f"Error extracting clip from local DVR: {str(e)}")
