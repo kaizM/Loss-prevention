@@ -153,8 +153,8 @@
                     <ul class="mb-0 mt-2">
                         <li><strong>IP Address:</strong> 192.168.0.5</li>
                         <li><strong>RTSP Port:</strong> 1050</li>
-                        <li><strong>Suggested URL:</strong> <code>rtsp://admin:password@192.168.0.5:1050/stream1</code></li>
-                        <li>Replace "password" with your actual camera password</li>
+                        <li><strong>Your RTSP URL:</strong> <code>rtsp://admin:Patan@2020@192.168.0.5:1050/stream1</code></li>
+                        <li>Credentials: admin / Patan@2020</li>
                         <li>Test in VLC player first to verify the URL works</li>
                     </ul>
                 </div>
@@ -163,9 +163,9 @@
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Alternative URLs to try:</strong>
                     <ul class="mb-0">
-                        <li><code>rtsp://admin:pass@192.168.0.5:1050/cam/realmonitor?channel=1&subtype=0</code></li>
-                        <li><code>rtsp://admin:pass@192.168.0.5:1050/live</code></li>
-                        <li><code>rtsp://admin:pass@192.168.0.5:1050/h264</code></li>
+                        <li><code>rtsp://admin:Patan@2020@192.168.0.5:1050/cam/realmonitor?channel=1&subtype=0</code></li>
+                        <li><code>rtsp://admin:Patan@2020@192.168.0.5:1050/live</code></li>
+                        <li><code>rtsp://admin:Patan@2020@192.168.0.5:1050/h264</code></li>
                     </ul>
                 </div>
                 
@@ -209,8 +209,8 @@
                                 <div class="mb-3">
                                     <label for="rtspUrl" class="form-label">RTSP URL</label>
                                     <input type="text" class="form-control" id="rtspUrl" 
-                                           value="rtsp://admin:password@192.168.0.5:1050/stream1"
-                                           placeholder="rtsp://username:password@192.168.0.5:1050/stream1">
+                                           value="rtsp://admin:Patan@2020@192.168.0.5:1050/stream1"
+                                           placeholder="rtsp://admin:Patan@2020@192.168.0.5:1050/stream1">
                                     <div class="form-text">Enter your camera credentials</div>
                                 </div>
                                 <div class="d-grid gap-2 d-md-flex">
@@ -349,7 +349,7 @@ function configureAlibi() {
 }
 
 function configureRTSP() {
-    alert('To configure your RTSP Stream:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add this secret:\n   - RTSP_STREAM_URL: rtsp://admin:yourpassword@192.168.0.5:1050/stream1\n\n3. Replace "yourpassword" with your actual camera password\n4. Try alternative URLs if the first doesn\'t work\n5. Restart the application');
+    alert('To configure your RTSP Stream:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add this secret:\n   - RTSP_STREAM_URL: rtsp://admin:Patan@2020@192.168.0.5:1050/stream1\n\n3. Test the connection first using Quick Test\n4. Try alternative URLs if the first doesn\'t work\n5. Restart the application after adding the secret');
 }
 
 function testRTSPQuick() {

@@ -8,25 +8,23 @@
 
 ## RTSP Connection Setup
 
-Based on your camera configuration, the RTSP URL will likely be:
+Based on your camera configuration, the RTSP URL is:
 ```
-rtsp://username:password@192.168.0.5:1050/stream1
+rtsp://admin:Patan@2020@192.168.0.5:1050/stream1
 ```
 
 ### Common RTSP URL Formats for Your Camera Type:
-1. `rtsp://admin:password@192.168.0.5:1050/cam/realmonitor?channel=1&subtype=0`
-2. `rtsp://admin:password@192.168.0.5:1050/stream1`
-3. `rtsp://admin:password@192.168.0.5:1050/live`
-4. `rtsp://admin:password@192.168.0.5:1050/h264`
+1. `rtsp://admin:Patan@2020@192.168.0.5:1050/cam/realmonitor?channel=1&subtype=0`
+2. `rtsp://admin:Patan@2020@192.168.0.5:1050/stream1`
+3. `rtsp://admin:Patan@2020@192.168.0.5:1050/live`
+4. `rtsp://admin:Patan@2020@192.168.0.5:1050/h264`
 
 ## To Configure in Replit:
 
 1. **Go to Replit Secrets** (🔐 icon in the sidebar)
 2. **Add this secret**:
    - Name: `RTSP_STREAM_URL`
-   - Value: `rtsp://admin:yourpassword@192.168.0.5:1050/stream1`
-   
-   Replace `yourpassword` with your actual camera password.
+   - Value: `rtsp://admin:Patan@2020@192.168.0.5:1050/stream1`
 
 3. **Optional: Test different stream paths** if the first one doesn't work:
    - Try the URLs listed above
