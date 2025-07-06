@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from app import app, db
 from models import TransactionReport, SuspiciousTransaction, ReviewLog
 from utils.file_parser import parse_modisoft_file
-from utils.video_processor import create_video_clip
+from utils.video_processor import create_video_clip, test_video_connection
 import logging
 
 ALLOWED_EXTENSIONS = {'txt', 'csv', 'xls', 'xlsx'}
@@ -260,6 +260,30 @@ def serve_video(transaction_id):
     else:
         flash('Video clip not available', 'error')
         return redirect(url_for('dashboard'))
+
+@app.route('/video_settings')
+def video_settings():
+    """Video configuration and testing page"""
+    # Test current video connections
+    connection_status = test_video_connection()
+    
+    # Get current environment settings (without exposing sensitive data)
+    current_settings = {
+        'alibi_cloud_configured': bool(os.environ.get('ALIBI_CLOUD_API')),
+        'rtsp_configured': bool(os.environ.get('RTSP_STREAM_URL')),
+        'alibi_camera_id': os.environ.get('ALIBI_CAMERA_ID', '1'),
+        'local_files_available': connection_status.get('local_files', False)
+    }
+    
+    return render_template('video_settings.html', 
+                         connection_status=connection_status,
+                         current_settings=current_settings)
+
+@app.route('/test_video_connection')
+def test_video_connection_route():
+    """AJAX endpoint to test video connections"""
+    status = test_video_connection()
+    return jsonify(status)
 
 def process_video_clips(report_id):
     """Process video clips for all suspicious transactions in a report"""

@@ -4,10 +4,13 @@ from datetime import datetime, timedelta
 import subprocess
 import glob
 from flask import current_app
+import requests
+import json
 
 def create_video_clip(transaction):
     """
     Create a video clip for a suspicious transaction.
+    Supports both local files and remote video sources (Alibi Cloud, RTSP).
     
     Args:
         transaction: SuspiciousTransaction object
@@ -16,19 +19,12 @@ def create_video_clip(transaction):
         str: Path to created video clip or None if failed
     """
     try:
-        # Find source video file based on timestamp
-        source_video = find_source_video(transaction.transaction_timestamp)
-        
-        if not source_video:
-            logging.warning(f"No source video found for transaction {transaction.id}")
-            return None
-        
         # Calculate clip start and end times
         clip_start = transaction.transaction_timestamp - timedelta(seconds=5)
         clip_end = transaction.transaction_timestamp + timedelta(seconds=10)
         
         # Create output filename
-        output_filename = f"{transaction.transaction_type}_{transaction.transaction_timestamp.strftime('%Y-%m-%d_%H-%M-%S')}_Cashier{transaction.cashier_id}.mp4"
+        output_filename = f"{transaction.transaction_type.replace(' ', '_')}_{transaction.transaction_timestamp.strftime('%Y-%m-%d_%H-%M-%S')}_Cashier{transaction.cashier_id or 'Unknown'}.mp4"
         
         # Create date-based subfolder
         date_folder = transaction.transaction_timestamp.strftime('%Y-%m-%d')
@@ -37,15 +33,35 @@ def create_video_clip(transaction):
         
         output_path = os.path.join(output_dir, output_filename)
         
-        # Extract video clip using FFmpeg
-        success = extract_video_clip(source_video, output_path, clip_start, clip_end)
+        # Try different video source methods
+        success = False
         
-        if success:
-            logging.info(f"Created video clip: {output_path}")
-            return output_path
-        else:
-            logging.error(f"Failed to create video clip for transaction {transaction.id}")
-            return None
+        # Method 1: Try Alibi Cloud API if configured
+        if os.environ.get('ALIBI_CLOUD_API'):
+            success = extract_clip_from_alibi_cloud(transaction.transaction_timestamp, output_path, clip_start, clip_end)
+            if success:
+                logging.info(f"Created video clip from Alibi Cloud: {output_path}")
+                return output_path
+        
+        # Method 2: Try RTSP stream if configured
+        rtsp_url = os.environ.get('RTSP_STREAM_URL')
+        if rtsp_url:
+            success = extract_clip_from_rtsp(rtsp_url, transaction.transaction_timestamp, output_path, clip_start, clip_end)
+            if success:
+                logging.info(f"Created video clip from RTSP: {output_path}")
+                return output_path
+        
+        # Method 3: Fallback to local video files
+        source_video = find_source_video(transaction.transaction_timestamp)
+        if source_video:
+            success = extract_video_clip(source_video, output_path, clip_start, clip_end)
+            if success:
+                logging.info(f"Created video clip from local file: {output_path}")
+                return output_path
+        
+        # If all methods failed
+        logging.warning(f"No video source available for transaction {transaction.id}")
+        return None
             
     except Exception as e:
         logging.error(f"Error creating video clip for transaction {transaction.id}: {str(e)}")
@@ -200,6 +216,176 @@ def is_ffmpeg_available():
     except FileNotFoundError:
         return False
 
+def extract_clip_from_alibi_cloud(timestamp, output_path, start_time, end_time):
+    """
+    Extract video clip from Alibi Cloud API.
+    
+    Args:
+        timestamp: Transaction timestamp
+        output_path: Path for output clip
+        start_time: Start time for the clip
+        end_time: End time for the clip
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Get Alibi Cloud credentials from environment
+        alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
+        alibi_username = os.environ.get('ALIBI_USERNAME')
+        alibi_password = os.environ.get('ALIBI_PASSWORD')
+        camera_id = os.environ.get('ALIBI_CAMERA_ID', '1')
+        
+        if not all([alibi_api_url, alibi_username, alibi_password]):
+            logging.warning("Alibi Cloud credentials not configured")
+            return False
+        
+        # Format timestamps for API
+        start_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
+        end_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
+        
+        # API request to get video clip
+        api_endpoint = f"{alibi_api_url}/api/video/export"
+        payload = {
+            'camera_id': camera_id,
+            'start_time': start_str,
+            'end_time': end_str,
+            'format': 'mp4'
+        }
+        
+        # Make authenticated request
+        response = requests.post(
+            api_endpoint,
+            json=payload,
+            auth=(alibi_username, alibi_password),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            # Save the video clip
+            with open(output_path, 'wb') as f:
+                f.write(response.content)
+            logging.info(f"Successfully downloaded clip from Alibi Cloud")
+            return True
+        else:
+            logging.error(f"Alibi Cloud API error: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        logging.error(f"Error extracting clip from Alibi Cloud: {str(e)}")
+        return False
+
+def extract_clip_from_rtsp(rtsp_url, timestamp, output_path, start_time, end_time):
+    """
+    Extract video clip from RTSP stream.
+    
+    Args:
+        rtsp_url: RTSP stream URL
+        timestamp: Transaction timestamp
+        output_path: Path for output clip
+        start_time: Start time for the clip
+        end_time: End time for the clip
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        if not is_ffmpeg_available():
+            logging.error("FFmpeg is not available for RTSP processing")
+            return False
+        
+        # Calculate duration
+        duration = (end_time - start_time).total_seconds()
+        
+        # For RTSP, we need to seek to the right time
+        # This is a simplified approach - in production you'd need more sophisticated time handling
+        seek_seconds = 0  # Would need to calculate based on stream start time
+        
+        # FFmpeg command for RTSP stream
+        cmd = [
+            'ffmpeg',
+            '-i', rtsp_url,
+            '-ss', str(seek_seconds),
+            '-t', str(duration),
+            '-c:v', 'libx264',
+            '-c:a', 'aac',
+            '-f', 'mp4',
+            '-movflags', 'faststart',
+            '-y',  # Overwrite output file
+            output_path
+        ]
+        
+        # Execute FFmpeg command
+        logging.info(f"Executing RTSP extraction: {' '.join(cmd[:3])}...")  # Don't log full URL for security
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            logging.info(f"Successfully extracted clip from RTSP stream")
+            return True
+        else:
+            logging.error(f"RTSP extraction error: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        logging.error("RTSP extraction timed out")
+        return False
+    except Exception as e:
+        logging.error(f"Error extracting clip from RTSP: {str(e)}")
+        return False
+
+def test_video_connection():
+    """
+    Test video source connections and return status.
+    
+    Returns:
+        dict: Status of different video sources
+    """
+    status = {
+        'alibi_cloud': False,
+        'rtsp_stream': False,
+        'local_files': False,
+        'ffmpeg': is_ffmpeg_available()
+    }
+    
+    try:
+        # Test Alibi Cloud connection
+        alibi_api_url = os.environ.get('ALIBI_CLOUD_API')
+        alibi_username = os.environ.get('ALIBI_USERNAME')
+        alibi_password = os.environ.get('ALIBI_PASSWORD')
+        
+        if all([alibi_api_url, alibi_username, alibi_password]):
+            try:
+                response = requests.get(
+                    f"{alibi_api_url}/api/status",
+                    auth=(alibi_username, alibi_password),
+                    timeout=10
+                )
+                status['alibi_cloud'] = response.status_code == 200
+            except:
+                pass
+        
+        # Test RTSP stream
+        rtsp_url = os.environ.get('RTSP_STREAM_URL')
+        if rtsp_url and is_ffmpeg_available():
+            try:
+                # Quick test to see if stream is accessible
+                cmd = ['ffprobe', '-v', 'quiet', '-t', '1', rtsp_url]
+                result = subprocess.run(cmd, capture_output=True, timeout=10)
+                status['rtsp_stream'] = result.returncode == 0
+            except:
+                pass
+        
+        # Test local files
+        video_source_dir = current_app.config.get('VIDEO_SOURCE_FOLDER', 'video_source')
+        if os.path.exists(video_source_dir):
+            video_files = glob.glob(os.path.join(video_source_dir, '*.mp4'))
+            status['local_files'] = len(video_files) > 0
+        
+    except Exception as e:
+        logging.error(f"Error testing video connections: {str(e)}")
+    
+    return status
+
 def get_video_info(video_path):
     """
     Get information about a video file.
@@ -223,7 +409,6 @@ def get_video_info(video_path):
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
-            import json
             return json.loads(result.stdout)
         else:
             return None

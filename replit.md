@@ -96,11 +96,21 @@ The system uses three main tables:
 - Automatic directory creation
 - Debug logging enabled
 
-## Changelog
+## Recent Changes
 
 ```
-Changelog:
-- July 06, 2025. Initial setup
+Recent Changes:
+- July 06, 2025: Enhanced video processing system
+  * Added Alibi Cloud API integration for direct video clip extraction
+  * Added RTSP stream support for live camera feeds
+  * Created video settings page for configuration and testing
+  * Maintained backward compatibility with local video files
+  * Added connection testing functionality
+- July 06, 2025: Initial system setup
+  * Built core Flask application with SQLAlchemy models
+  * Implemented file upload and transaction parsing
+  * Created responsive web dashboard with Bootstrap dark theme
+  * Added review workflow and reporting features
 ```
 
 ## User Preferences

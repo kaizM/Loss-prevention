@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Video Settings - Loss Prevention System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-video me-2"></i>Video Configuration</h1>
+        <p class="text-muted">Configure your video sources for automatic clip extraction</p>
+    </div>
+</div>
+
+<!-- Connection Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plug me-2"></i>Connection Status
+                </h5>
+                <button class="btn btn-sm btn-primary" onclick="testConnections()">
+                    <i class="fas fa-sync me-1"></i>Test Connections
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <i class="fas fa-cloud fa-2x {% if connection_status.alibi_cloud %}text-success{% else %}text-muted{% endif %} mb-2"></i>
+                            <h6>Alibi Cloud</h6>
+                            <span class="badge {% if connection_status.alibi_cloud %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if connection_status.alibi_cloud %}Connected{% else %}Not Configured{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <i class="fas fa-satellite-dish fa-2x {% if connection_status.rtsp_stream %}text-success{% else %}text-muted{% endif %} mb-2"></i>
+                            <h6>RTSP Stream</h6>
+                            <span class="badge {% if connection_status.rtsp_stream %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if connection_status.rtsp_stream %}Connected{% else %}Not Configured{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <i class="fas fa-folder fa-2x {% if connection_status.local_files %}text-success{% else %}text-muted{% endif %} mb-2"></i>
+                            <h6>Local Files</h6>
+                            <span class="badge {% if connection_status.local_files %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if connection_status.local_files %}Available{% else %}No Files{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-center">
+                            <i class="fas fa-cogs fa-2x {% if connection_status.ffmpeg %}text-success{% else %}text-danger{% endif %} mb-2"></i>
+                            <h6>FFmpeg</h6>
+                            <span class="badge {% if connection_status.ffmpeg %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if connection_status.ffmpeg %}Available{% else %}Missing{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Options -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cloud me-2"></i>Alibi Cloud Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>How to configure Alibi Cloud:</strong>
+                    <ol class="mb-0 mt-2">
+                        <li>Log into your Alibi Cloud web portal</li>
+                        <li>Navigate to API Settings or Developer Tools</li>
+                        <li>Generate an API key or note your login credentials</li>
+                        <li>Copy your cloud API endpoint URL</li>
+                        <li>Add these as environment variables in Replit Secrets</li>
+                    </ol>
+                </div>
+                
+                <h6>Required Environment Variables:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><code>ALIBI_CLOUD_API</code></td>
+                                <td>
+                                    {% if current_settings.alibi_cloud_configured %}
+                                        <span class="badge bg-success">Configured</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Missing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>ALIBI_USERNAME</code></td>
+                                <td>
+                                    {% if current_settings.alibi_cloud_configured %}
+                                        <span class="badge bg-success">Configured</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Missing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>ALIBI_PASSWORD</code></td>
+                                <td>
+                                    {% if current_settings.alibi_cloud_configured %}
+                                        <span class="badge bg-success">Configured</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Missing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>ALIBI_CAMERA_ID</code></td>
+                                <td>{{ current_settings.alibi_camera_id }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="configureAlibi()">
+                        <i class="fas fa-cog me-1"></i>Configure Alibi Cloud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-satellite-dish me-2"></i>RTSP Stream Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>How to configure RTSP:</strong>
+                    <ol class="mb-0 mt-2">
+                        <li>Find your camera's RTSP URL from its settings</li>
+                        <li>Usually looks like: <code>rtsp://username:password@ip:port/stream1</code></li>
+                        <li>Test the stream in VLC media player first</li>
+                        <li>Add the full URL to Replit Secrets</li>
+                    </ol>
+                </div>
+                
+                <h6>Required Environment Variable:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><code>RTSP_STREAM_URL</code></td>
+                                <td>
+                                    {% if current_settings.rtsp_configured %}
+                                        <span class="badge bg-success">Configured</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Missing</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="configureRTSP()">
+                        <i class="fas fa-cog me-1"></i>Configure RTSP Stream
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Local Files Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-folder me-2"></i>Local Video Files (Fallback Option)
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>As a fallback, you can place video files in the <code>video_source/</code> folder with these naming conventions:</p>
+                <ul>
+                    <li><code>2025-07-05-13-25.mp4</code> (Date-Time format)</li>
+                    <li><code>20250705_1325.mp4</code> (Compact format)</li>
+                    <li><code>2025-07-05.mp4</code> (Daily files)</li>
+                </ul>
+                
+                {% if current_settings.local_files_available %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Local video files detected in the video_source folder.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No local video files found. Upload files to the video_source folder or configure cloud/RTSP access.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testConnections() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+    
+    fetch('/test_video_connection')
+        .then(response => response.json())
+        .then(data => {
+            // Update connection status indicators
+            updateConnectionStatus(data);
+            showNotification('Connection test completed', 'success');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error testing connections', 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+}
+
+function updateConnectionStatus(status) {
+    // Update Alibi Cloud status
+    const alibiIcon = document.querySelector('.col-md-3:nth-child(1) i');
+    const alibiBadge = document.querySelector('.col-md-3:nth-child(1) .badge');
+    if (status.alibi_cloud) {
+        alibiIcon.className = 'fas fa-cloud fa-2x text-success mb-2';
+        alibiBadge.className = 'badge bg-success';
+        alibiBadge.textContent = 'Connected';
+    } else {
+        alibiIcon.className = 'fas fa-cloud fa-2x text-muted mb-2';
+        alibiBadge.className = 'badge bg-secondary';
+        alibiBadge.textContent = 'Not Connected';
+    }
+    
+    // Update RTSP status
+    const rtspIcon = document.querySelector('.col-md-3:nth-child(2) i');
+    const rtspBadge = document.querySelector('.col-md-3:nth-child(2) .badge');
+    if (status.rtsp_stream) {
+        rtspIcon.className = 'fas fa-satellite-dish fa-2x text-success mb-2';
+        rtspBadge.className = 'badge bg-success';
+        rtspBadge.textContent = 'Connected';
+    } else {
+        rtspIcon.className = 'fas fa-satellite-dish fa-2x text-muted mb-2';
+        rtspBadge.className = 'badge bg-secondary';
+        rtspBadge.textContent = 'Not Connected';
+    }
+    
+    // Update Local Files status
+    const localIcon = document.querySelector('.col-md-3:nth-child(3) i');
+    const localBadge = document.querySelector('.col-md-3:nth-child(3) .badge');
+    if (status.local_files) {
+        localIcon.className = 'fas fa-folder fa-2x text-success mb-2';
+        localBadge.className = 'badge bg-success';
+        localBadge.textContent = 'Available';
+    } else {
+        localIcon.className = 'fas fa-folder fa-2x text-muted mb-2';
+        localBadge.className = 'badge bg-secondary';
+        localBadge.textContent = 'No Files';
+    }
+    
+    // Update FFmpeg status
+    const ffmpegIcon = document.querySelector('.col-md-3:nth-child(4) i');
+    const ffmpegBadge = document.querySelector('.col-md-3:nth-child(4) .badge');
+    if (status.ffmpeg) {
+        ffmpegIcon.className = 'fas fa-cogs fa-2x text-success mb-2';
+        ffmpegBadge.className = 'badge bg-success';
+        ffmpegBadge.textContent = 'Available';
+    } else {
+        ffmpegIcon.className = 'fas fa-cogs fa-2x text-danger mb-2';
+        ffmpegBadge.className = 'badge bg-danger';
+        ffmpegBadge.textContent = 'Missing';
+    }
+}
+
+function configureAlibi() {
+    alert('To configure Alibi Cloud:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add these secrets:\n   - ALIBI_CLOUD_API: Your Alibi API endpoint\n   - ALIBI_USERNAME: Your username\n   - ALIBI_PASSWORD: Your password\n   - ALIBI_CAMERA_ID: Camera ID (optional, defaults to 1)\n\n3. Restart the application');
+}
+
+function configureRTSP() {
+    alert('To configure RTSP Stream:\n\n1. Go to Replit Secrets (🔐 icon in sidebar)\n2. Add this secret:\n   - RTSP_STREAM_URL: Your full RTSP URL\n   Example: rtsp://admin:password@192.168.1.100:554/stream1\n\n3. Restart the application');
+}
+</script>
+{% endblock %}

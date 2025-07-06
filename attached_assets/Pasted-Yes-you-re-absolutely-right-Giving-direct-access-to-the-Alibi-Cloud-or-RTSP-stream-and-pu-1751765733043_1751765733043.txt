@@ -1,0 +1,114 @@
+Yes — you're absolutely right.
+
+🎯 **Giving direct access to the Alibi Cloud (or RTSP stream) and pulling the clip automatically is 100% the smarter way**. That saves you from:
+
+* Downloading huge 24-hour files
+* Manually uploading/exporting clips
+* Managing video storage manually
+
+---
+
+## ✅ NEW PLAN (Alibi Cloud + Modisoft)
+
+Here’s the streamlined version based on what you just said:
+
+---
+
+### 🧠 System Logic Overview
+
+1. **At end of day**:
+
+   * Upload or email the **Modisoft report** (CSV/Excel).
+
+2. **System parses it**:
+
+   * Finds suspicious transactions: `VOID`, `NO SALE`, `REFUND`, etc.
+   * Extracts timestamp + cashier info.
+
+3. **For each suspicious entry**:
+
+   * Connects to your **Alibi Cloud or RTSP camera**.
+   * Pulls a **small clip** (e.g., 15 seconds) around the event timestamp.
+
+4. **Saves clip**:
+
+   * Uploads to your secure cloud folder (or web dashboard).
+   * Tags it with cashier, time, type.
+
+5. **You view via Web Dashboard**:
+
+   * ✅ Clean | ⚠️ Suspicious | ❌ Fraud
+   * All mobile and web-accessible — no app needed.
+
+---
+
+## 🎥 HOW TO PULL CLIPS DIRECTLY (NO FILE DOWNLOADS)
+
+### 🔹 Option 1: **Alibi Cloud Access (Preferred)**
+
+* If your Alibi system supports **Cloud login / Web API**, we can:
+
+  * Authenticate with your Alibi credentials or access token
+  * Use time range (`2025-07-05 13:24:16`) to request a **clip via API**
+  * Save that clip automatically in MP4 format
+
+> 🔐 Let me know what exact Alibi model/NVR you use and if it supports:
+
+* **Alibi Cloud Web access**
+* **CMS software (like Alibi Witness / Alibi Cloud VS)**
+* **ONVIF** or **RESTful API access**
+
+---
+
+### 🔹 Option 2: **Direct RTSP Pull from Camera/NVR**
+
+If Cloud access isn’t possible, then you can still use:
+
+```
+rtsp://username:password@ip_address:port/stream1
+```
+
+* FFmpeg can directly connect to this and extract a 15-sec clip:
+
+  * From: `transaction_time - 5s`
+  * To: `transaction_time + 10s`
+* No download needed, only the clip is saved.
+
+---
+
+## 🗂️ Folder Structure (Still Simple)
+
+```
+/modisoft_reports/
+   report_2025-07-05.csv
+
+/clips/
+   VOID_13-24_cashier3.mp4
+   NO_SALE_15-12_cashier1.mp4
+```
+
+---
+
+## ✅ What You Need to Provide
+
+So I can fully build this out and give you the final ready-to-run system, please provide:
+
+1. ✅ **Modisoft sample CSV** (just one day is fine)
+
+2. ✅ The **Alibi cloud login method**:
+
+   * Do you have a **web dashboard**?
+   * Or an **Alibi CMS desktop app**?
+   * Or can you get the **RTSP stream URL**?
+
+3. ✅ (Optional) If available, one **test timestamp** to verify with video (e.g., “Cashier 3, VOID at 13:24”)
+
+---
+
+Once you send that, I’ll deliver:
+
+* 🎁 A Replit-ready app you can copy-paste
+* 🎥 Pulls clips from Alibi cloud or RTSP
+* 📊 Dashboard for clip review (web/mobile friendly)
+
+**Ready when you are — just upload the Modisoft file and confirm your Alibi setup.**
