@@ -108,6 +108,7 @@ def dashboard():
     page = request.args.get('page', 1, type=int)
     status_filter = request.args.get('status', 'all')
     transaction_type_filter = request.args.get('type', 'all')
+    date_filter = request.args.get('date_filter', '')
     
     # Build query
     query = SuspiciousTransaction.query
@@ -118,6 +119,20 @@ def dashboard():
     if transaction_type_filter != 'all':
         query = query.filter_by(transaction_type=transaction_type_filter)
     
+    # Add date filtering
+    if date_filter:
+        try:
+            from datetime import datetime, timedelta
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            start_datetime = datetime.combine(filter_date, datetime.min.time())
+            end_datetime = datetime.combine(filter_date, datetime.max.time())
+            query = query.filter(
+                SuspiciousTransaction.transaction_timestamp >= start_datetime,
+                SuspiciousTransaction.transaction_timestamp <= end_datetime
+            )
+        except ValueError:
+            flash(f'Invalid date format: {date_filter}', 'error')
+    
     # Pagination
     transactions = query.order_by(SuspiciousTransaction.transaction_timestamp.desc()).paginate(
         page=page, per_page=20, error_out=False
@@ -126,12 +141,19 @@ def dashboard():
     return render_template('dashboard.html', 
                          transactions=transactions, 
                          status_filter=status_filter,
-                         transaction_type_filter=transaction_type_filter)
+                         transaction_type_filter=transaction_type_filter,
+                         date_filter=date_filter)
 
 @app.route('/review/<int:transaction_id>')
 def review_transaction(transaction_id):
     """Review individual transaction with video"""
     transaction = SuspiciousTransaction.query.get_or_404(transaction_id)
+    
+    # Get filter parameters to maintain context
+    date_filter = request.args.get('date_filter', '')
+    status_filter = request.args.get('status_filter', '')
+    type_filter = request.args.get('type_filter', '')
+    page = request.args.get('page', 1)
     
     # Get related transactions (same cashier, same time period)
     related_transactions = SuspiciousTransaction.query.filter(
@@ -142,7 +164,11 @@ def review_transaction(transaction_id):
     
     return render_template('review.html', 
                          transaction=transaction,
-                         related_transactions=related_transactions)
+                         related_transactions=related_transactions,
+                         date_filter=date_filter,
+                         status_filter=status_filter,
+                         type_filter=type_filter,
+                         page=page)
 
 @app.route('/update_review/<int:transaction_id>', methods=['POST'])
 def update_review(transaction_id):
