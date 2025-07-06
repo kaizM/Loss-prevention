@@ -58,9 +58,10 @@ def parse_modisoft_file(filepath):
         header_row_index = None
         for i in range(min(10, len(df))):
             row_data = df.iloc[i].astype(str)
-            if any(keyword in ' '.join(row_data.values).upper() for keyword in ['TRAN DATE', 'TRANSACTION', 'DATE', 'TIME', 'CASHIER']):
+            row_str = ' '.join(row_data.values).upper()
+            if any(keyword in row_str for keyword in ['TRAN DATE', 'TRAN TYPE', 'TENDER', 'GROSS']):
                 header_row_index = i
-                logging.info(f"Found header row at index {i}")
+                logging.info(f"Found header row at index {i}: {df.iloc[i].tolist()}")
                 break
         
         if header_row_index is not None:
@@ -134,10 +135,10 @@ def parse_modisoft_file(filepath):
                 # Get transaction type
                 transaction_type = str(row.get(column_mapping.get('transaction_type', ''), '')).upper()
                 
-                # For Modisoft: anything that's NOT "normal" is potentially suspicious
-                # Plus check for specific suspicious types
-                is_suspicious = (transaction_type.lower() != 'normal' and transaction_type.lower() != '') or \
-                               any(sus_type in transaction_type for sus_type in suspicious_types)
+                # For Modisoft: flag specific suspicious transaction types
+                # Based on your data: "No Sale", "void", etc.
+                is_suspicious = (transaction_type.upper() in ['NO SALE', 'VOID', 'REFUND', 'RETURN', 'CANCEL', 'ADJUSTMENT']) or \
+                               any(sus_type in transaction_type.upper() for sus_type in suspicious_types)
                 
                 if is_suspicious:
                     # Parse timestamp
