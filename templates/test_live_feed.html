@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Test Live Feed{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-video me-2"></i>Test Live Feed</h1>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-eye me-2"></i>Live Video Feed
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Testing Live Connection</strong>
+                        <p class="mb-0">This will test your live video feed connection. Make sure your camera is powered on and network accessible.</p>
+                    </div>
+                    
+                    <!-- Video Player -->
+                    <div class="video-container mb-3">
+                        <video id="live-video" class="video-js vjs-default-skin w-100" controls preload="none" width="800" height="450"
+                               data-setup='{"fluid": true, "responsive": true}'>
+                            <source src="rtsp://admin:password@192.168.1.100:554/stream1" type="rtmp/mp4">
+                            <p class="vjs-no-js">
+                                To view this video please enable JavaScript, and consider upgrading to a web browser that
+                                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>.
+                            </p>
+                        </video>
+                    </div>
+                    
+                    <!-- Connection Test Results -->
+                    <div id="connection-results" class="mt-3" style="display: none;">
+                        <h6>Connection Test Results:</h6>
+                        <div id="results-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tools me-2"></i>Test Controls
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary w-100 mb-3" onclick="testConnection()">
+                        <i class="fas fa-play me-2"></i>Test Connection
+                    </button>
+                    
+                    <button class="btn btn-secondary w-100 mb-3" onclick="refreshFeed()">
+                        <i class="fas fa-sync me-2"></i>Refresh Feed
+                    </button>
+                    
+                    <div class="alert alert-secondary">
+                        <small>
+                            <strong>Common Issues:</strong><br>
+                            • Camera not powered on<br>
+                            • Network connectivity<br>
+                            • Wrong IP address<br>
+                            • Incorrect credentials<br>
+                            • Firewall blocking port 554
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Connection Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">RTSP URL</label>
+                        <input type="text" class="form-control" id="rtsp-url" 
+                               value="rtsp://admin:password@192.168.1.100:554/stream1"
+                               placeholder="rtsp://username:password@ip:port/stream">
+                    </div>
+                    
+                    <button class="btn btn-warning w-100" onclick="updateStream()">
+                        <i class="fas fa-save me-2"></i>Update Stream
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize video player
+let player;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Video.js player
+    player = videojs('live-video', {
+        controls: true,
+        fluid: true,
+        responsive: true,
+        liveui: true,
+        html5: {
+            vhs: {
+                overrideNative: true
+            }
+        }
+    });
+    
+    // Handle player ready
+    player.ready(function() {
+        console.log('Video player is ready');
+    });
+    
+    // Handle errors
+    player.on('error', function() {
+        console.log('Video player error:', player.error());
+        showConnectionResult('error', 'Video player error: ' + JSON.stringify(player.error()));
+    });
+});
+
+function testConnection() {
+    showConnectionResult('info', 'Testing connection...');
+    
+    fetch('/test_rtsp_url', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            rtsp_url: document.getElementById('rtsp-url').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showConnectionResult('success', 'Connection successful!');
+        } else {
+            showConnectionResult('error', 'Connection failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showConnectionResult('error', 'Test failed: ' + error.message);
+    });
+}
+
+function refreshFeed() {
+    if (player) {
+        player.src({
+            src: document.getElementById('rtsp-url').value,
+            type: 'application/x-rtmp'
+        });
+        player.load();
+    }
+}
+
+function updateStream() {
+    const newUrl = document.getElementById('rtsp-url').value;
+    if (player) {
+        player.src({
+            src: newUrl,
+            type: 'application/x-rtmp'
+        });
+        player.load();
+    }
+    showConnectionResult('info', 'Stream updated to: ' + newUrl);
+}
+
+function showConnectionResult(type, message) {
+    const resultsDiv = document.getElementById('connection-results');
+    const contentDiv = document.getElementById('results-content');
+    
+    let alertClass = 'alert-info';
+    let icon = 'fas fa-info-circle';
+    
+    if (type === 'success') {
+        alertClass = 'alert-success';
+        icon = 'fas fa-check-circle';
+    } else if (type === 'error') {
+        alertClass = 'alert-danger';
+        icon = 'fas fa-exclamation-circle';
+    }
+    
+    contentDiv.innerHTML = `
+        <div class="alert ${alertClass}">
+            <i class="${icon} me-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    resultsDiv.style.display = 'block';
+}
+</script>
+{% endblock %}

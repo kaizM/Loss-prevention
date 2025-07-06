@@ -456,6 +456,20 @@ def test_video_processing():
     
     return redirect(url_for('review_transaction', transaction_id=test_transaction.id))
 
+@app.route('/test_live_feed')
+def test_live_feed():
+    """Test live video feed connection"""
+    return render_template('test_live_feed.html')
+
+@app.route('/live_feed_stream')
+def live_feed_stream():
+    """Stream live video feed"""
+    # This will serve the live RTSP stream
+    rtsp_url = os.environ.get('RTSP_URL', 'rtsp://admin:password@192.168.1.100:554/stream1')
+    
+    # For now, return a test response
+    return f"Live feed URL: {rtsp_url}"
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
