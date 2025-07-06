@@ -145,13 +145,23 @@ def parse_modisoft_file(filepath):
                     timestamp = parse_timestamp(row, column_mapping)
                     
                     if timestamp:
+                        # Get cashier name, fallback to register or N/A
+                        cashier_name = str(row.get(column_mapping.get('cashier_id', ''), '')).strip()
+                        if not cashier_name or cashier_name.lower() in ['nan', 'none', '']:
+                            register_id = str(row.get(column_mapping.get('register_id', ''), '')).strip()
+                            cashier_name = f"Register {register_id}" if register_id and register_id.lower() not in ['nan', 'none', ''] else "N/A"
+                        
+                        # Get amount, ensure it's properly parsed
+                        amount_value = row.get(column_mapping.get('amount', ''), 0)
+                        amount = parse_amount(amount_value) if amount_value else 0.0
+                        
                         suspicious_transaction = {
                             'timestamp': timestamp,
-                            'cashier_id': str(row.get(column_mapping.get('cashier_id', ''), '')),
+                            'cashier_id': cashier_name,
                             'register_id': str(row.get(column_mapping.get('register_id', ''), '')),
                             'transaction_type': transaction_type,
                             'transaction_id': str(row.get(column_mapping.get('transaction_id', ''), '')),
-                            'amount': parse_amount(row.get(column_mapping.get('amount', ''), 0)),
+                            'amount': amount,
                             'pump_number': str(row.get(column_mapping.get('pump_number', ''), '')),
                             'raw_data': row.to_dict(),
                             'total_count': len(df)
@@ -193,7 +203,7 @@ def identify_columns(columns):
         'amount': ['gross', 'amount', 'total', 'value', 'sum', 'price', 'net'],
         'tender': ['tender', 'payment', 'method', 'payment_type'],
         'discount': ['discount', 'disc', 'reduction'],
-        'cashier_id': ['cashier', 'cashier_id', 'employee', 'emp_id', 'clerk', 'operator'],
+        'cashier_id': ['cashier name', 'cashier', 'cashier_id', 'employee', 'emp_id', 'clerk', 'operator'],
         'register_id': ['register', 'reg_id', 'terminal', 'pos_id', 'station'],
         'transaction_id': ['trans_id', 'transaction_id', 'receipt', 'receipt_id', 'id', 'tran id'],
         'pump_number': ['pump', 'pump_no', 'pump_number', 'dispenser', 'fueling_point']
